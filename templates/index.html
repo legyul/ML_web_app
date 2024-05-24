@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clustering Input Form</title>
+</head>
+<body>
+    <h1>Clustering Input Form</h1>
+    <form action="/result" method="post">
+        <label for="file_key">File Key:</label>
+        <input type="text" id="file_key" name="file_key" required><br><br>
+
+        <label for="threshold">Threshold:</label>
+        <input type="number" step="0.01" id="threshold" name="threshold" required><br><br>
+
+        <label for="algorithm">Clustering Algorithm:</label>
+        <select id="algorithm" name="algorithm">
+            <option value="k-Means">K-Means</option>
+            <option value="Agglomerative">Agglomerative</option>
+        </select><br><br>
+
+        <label for="plot">Plot:</label>
+        <input type="checkbox" id="plot" name="plot"><br><br>
+
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>

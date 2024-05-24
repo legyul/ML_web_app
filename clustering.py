@@ -10,23 +10,39 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import DBSCAN
 from sklearn.cluster import AgglomerativeClustering
+from dotenv import load_dotenv
+import os
+import boto3
 
+load_dotenv()
+
+S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+
+s3 = boto3.client(
+    's3',
+    aws_access_key_id=AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+)
 
 # Functions
 # Load dataset file
-def load_file(file_path):
-    file_extention = file_path.split('.')[-1]
+def load_file(file_key):
+    obj = s3.get_object(Bucket=S3_BUCKET_NAME, Key=file_key)
+    file_extention = file_key.split('.')[-1]
+
     if file_extention == 'csv':
-        return pd.read_csv(file_path)
+        return pd.read_csv(obj['Body'])
     
     elif file_extention == 'xlsx':
-        return pd.read_excel(file_path)
+        return pd.read_excel(obj['Body'])
     
     elif file_extention == 'json':
-        return pd.read_json(file_path)
+        return pd.read_json(obj['Body'])
     
     else:
-        return print("Use other file formate, .csv, .xlsx, .json")
+        raise ValueError("Unsupported file format")
 
 # Find the useful variables to cluster
 def identify_variable(data, threshold):
@@ -47,8 +63,8 @@ def preprocessing_data(data):
 
     return scaled_df
 
-def perform_pca(data, n_components=None):
-    pca = PCA(n_components=n_components)
+def perform_pca(data):
+    pca = PCA(n_components=2)
     transform_data = pca.fit_transform(data)
 
     return transform_data
@@ -79,7 +95,7 @@ def elbow(data):
     plt.xlabel('Number of clusters')
     plt.ylabel('WCSS')
     plt.title('Elbow Method')
-    plt.savefig('./sample_output/_img/Elbow_Method.png')
+    plt.savefig('./static/_img/Elbow_Method.png')
     plt.show()
 
     return elbow_point
@@ -141,26 +157,26 @@ def plot_cluster(pca_df):
         axs_k = plt.subplots()
         axs_k = sns.scatterplot(x=pca_df[0], y=pca_df[1], hue='k-Means Cluster', data=pca_df)
         plt.title('k-Means Cluster')
-        plt.savefig('./sample_output/_img/k-Means_Cluster.png')
+        plt.savefig('./static/_img/k-Means_Cluster.png')
 
         axs_a = plt.subplots()
         axs_a = sns.scatterplot(x=pca_df[0], y=pca_df[1], hue='Agglomerative Cluster', data=pca_df)
         plt.title('Agglomerative Cluster')
-        plt.savefig('./sample_output/_img/Agglomerative_Cluster.png')
+        plt.savefig('./static/_img/Agglomerative_Cluster.png')
     
     # If user choose only Agglomerative clustering algorithm, then plot agglomerative cluster
     elif 'Agglomerative Cluster' in pca_df.columns:
         axs = plt.subplots()
         axs = sns.scatterplot(x=pca_df[0], y=pca_df[1], hue='Agglomerative Cluster', data=pca_df)
         plt.title('Agglomerative Cluster')
-        plt.savefig('./sample_output/_img/Agglomerative_Cluster.png')
+        plt.savefig('./static/_img/Agglomerative_Cluster.png')
     
     # If user choose only k-Means clustering algorithm, then plot k-Means cluster
     elif 'k-Means Cluster' in pca_df.columns:
         axs = plt.subplots()
         axs = sns.scatterplot(x=pca_df[0], y=pca_df[1], hue='k-Means Cluster', data=pca_df)
         plt.title('k-Means Cluster')
-        plt.savefig('./sample_output/_img/k-Means_Cluster.png')
+        plt.savefig('./static/_img/k-Means_Cluster.png')
 
 # Determine optimal number of clusters using silhouette method
 class silhouetteAnalyze:
@@ -205,6 +221,6 @@ class silhouetteAnalyze:
         plt.xlabel('Number of clusters')
         plt.ylabel('Silhouette Score')
         plt.title('Silhouette Method')
-        plt.savefig('./sample_output/_img/Silhouette_Method.png')
+        plt.savefig('./static/_img/Silhouette_Method.png')
         plt.show()
 

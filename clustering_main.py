@@ -5,14 +5,14 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, HRFl
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 
 
-def main(file_path, threshold, algorithm, n_components, plot):
+def main(file_key, threshold, algorithm, plot):
 
     # Call the file and save it to a variable, df
-    df = load_file(file_path)
-    file_name = Path(file_path).stem
+    df = load_file(file_key)
+    file_name = Path(file_key).stem
     
     # Create a PDF document
-    doc = SimpleDocTemplate("./sample_output/_doc/Report.pdf", pagesize=letter)
+    doc = SimpleDocTemplate("./static/_doc/Report.pdf", pagesize=letter)
     styles = getSampleStyleSheet()
 
     title = Paragraph("Clustering Report", styles['Title'])
@@ -50,11 +50,7 @@ def main(file_path, threshold, algorithm, n_components, plot):
         df['Agglomerative Cluster'] = agglom_label
 
     if plot == 'yes':
-        if n_components == None:
-            pca = perform_pca(filtered_df, 2)
-        
-        else:
-            pca = perform_pca(filtered_df, n_components)
+        pca = perform_pca(filtered_df)
         
         pca_df = pd.DataFrame(pca)
         pca_df['k-Means Cluster'] = df['k-Means Cluster']
@@ -90,7 +86,7 @@ def main(file_path, threshold, algorithm, n_components, plot):
 
     content = [title, Spacer(1, 24), file_name_para, line, cluster_text, silhouette_text, score_text, Spacer(1,12)]
 
-    elbow_img = './sample_output/_img/Elbow_Method.png'
+    elbow_img = './static/_img/Elbow_Method.png'
     if elbow_img:
         plot_img = plt.imread(elbow_img)
         img_width = 400
@@ -99,7 +95,7 @@ def main(file_path, threshold, algorithm, n_components, plot):
         content.append(Spacer(1, 12))
         content.append(elbow_img_obj)
 
-    silhouette_img = './sample_output/_img/Silhouette_Method.png'
+    silhouette_img = './static/_img/Silhouette_Method.png'
     if silhouette_img:
         plot_img = plt.imread(silhouette_img)
         img_width = 400
@@ -108,7 +104,7 @@ def main(file_path, threshold, algorithm, n_components, plot):
         content.append(Spacer(1, 12))
         content.append(silhouette_img_obj)
 
-    kmeans_img = './sample_output/_img/k-Means_Cluster.png'
+    kmeans_img = './static/_img/k-Means_Cluster.png'
     if kmeans_img:
         plot_img = plt.imread(kmeans_img)
         img_width = 400
@@ -117,7 +113,7 @@ def main(file_path, threshold, algorithm, n_components, plot):
         content.append(Spacer(1, 12))
         content.append(kmeans_img_obj)
 
-    agglom_img = './sample_output/_img/Agglomerative_Cluster.png'
+    agglom_img = './static/_img/Agglomerative_Cluster.png'
     if agglom_img:
         plot_img = plt.imread(agglom_img)
         img_width = 400
@@ -128,6 +124,6 @@ def main(file_path, threshold, algorithm, n_components, plot):
     
     doc.build(content)
     
-    df.to_csv('./sample_output/_doc/Result.csv')
+    df.to_csv('./static/_doc/Result.csv')
 
-main('./data/wine-clustering.csv', 0.5, 'both', 2, 'yes')
+# main('./data/wine-clustering.csv', 0.5, 'both', 'yes')
