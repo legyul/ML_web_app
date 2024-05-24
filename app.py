@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file
 from werkzeug.utils import secure_filename
-from clustering_main import main
+from app.clustering_main import main
 import boto3
 import os
 from dotenv import load_dotenv
+from flask_swagger_ui import get_swaggerui_blueprint
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,12 +23,53 @@ UPLOAD_FOLDER = '/tmp'
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+SWAGGER_URL = '/swagger'
+API_URL = '/static/swagger.json'
+swagger_ui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': "ML Platform"
+    }
+)
+
+app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload():
+    """
+    Upload a file and perform clustering analysis.
+    ---
+    parameters:
+      - name: file
+        in: formData
+        type: file
+        required: true
+        description: The file to upload.
+      - name: threshold
+        in: formData
+        type: number
+        required: true
+        description: The threshold to identify useful columns for clustering.
+      - name: algorithm
+        in: formData
+        type: string
+        required: true
+        description: The clustering algorithm to use.
+      - name: plot
+        in: formData
+        type: string
+        description: Whether to generate a plot.
+    responses:
+      302:
+        description: Redirects to the report page.
+      404:
+        description: Report not found.
+    """
     if request.method == 'POST':
         file = request.files['file']
         if file:

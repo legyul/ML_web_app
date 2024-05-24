@@ -1,4 +1,4 @@
-from clustering import load_file, Path, preprocessing_data, identify_variable, elbow, silhouetteAnalyze, choose_cluster, choose_algo, perform_pca, plot_cluster, pd, plt
+from app.clustering import load_file, Path, preprocessing_data, identify_variable, elbow, silhouetteAnalyze, choose_cluster, choose_algo, perform_pca, plot_cluster, pd, plt
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, HRFlowable
