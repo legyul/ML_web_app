@@ -29,20 +29,17 @@ s3 = boto3.client(
 # Functions
 # Load dataset file
 def load_file(file_key):
-    obj = s3.get_object(Bucket=S3_BUCKET_NAME, Key=file_key)
-    file_extention = file_key.split('.')[-1]
-
+    file_path = f"/tmp/{file_key}"
+    s3.download_file(S3_BUCKET_NAME, file_key, file_path)
+    file_extention = file_path.split('.')[-1]
     if file_extention == 'csv':
-        return pd.read_csv(obj['Body'])
-    
+        return pd.read_csv(file_path)
     elif file_extention == 'xlsx':
-        return pd.read_excel(obj['Body'])
-    
+        return pd.read_excel(file_path)
     elif file_extention == 'json':
-        return pd.read_json(obj['Body'])
-    
+        return pd.read_json(file_path)
     else:
-        raise ValueError("Unsupported file format")
+        raise ValueError("Unsupported file format, use .csv, .xlsx, or .json")
 
 # Find the useful variables to cluster
 def identify_variable(data, threshold):
