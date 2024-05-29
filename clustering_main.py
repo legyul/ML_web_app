@@ -1,4 +1,4 @@
-from app.clustering import load_file, Path, preprocessing_data, identify_variable, elbow, silhouetteAnalyze, choose_cluster, choose_algo, perform_pca, plot_cluster, pd, plt
+from clustering import load_file, Path, preprocessing_data, identify_variable, elbow, elbow_plot, silhouetteAnalyze, choose_cluster, choose_algo, perform_pca, plot_cluster, pd, plt
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, HRFlowable
@@ -25,7 +25,8 @@ def main(file_key, threshold, algorithm, plot):
     filtered_df = pre_df[variable_names]
 
     # Elbow method to determine the number of clusters
-    elbow_cluster = elbow(filtered_df)
+    elbow_cluster, wcss = elbow(filtered_df)
+    elbow_plot(elbow_cluster, wcss)
 
     # Silhouette method to determine the number of clusters
     silhouette = silhouetteAnalyze(filtered_df)
@@ -75,14 +76,13 @@ def main(file_key, threshold, algorithm, plot):
 
         elif scores <= -0.5:
             score_info = "Since Silhouette Score is smaller than or eqaul to -0.5, it is Strong evidence of misclassification or poor clustering structure."
-        
+    
     silhouette_info = f"\nSilhouette Score: {scores}"
 
     cluster_text = Paragraph(cluster_info, styles['Normal'])
     silhouette_text = Paragraph(silhouette_info, styles['Normal'])
     score_text = Paragraph(score_info, styles['Normal'])
     line = HRFlowable(width="100%", thickness=1, lineCap='square', color="black", spaceBefore=10, spaceAfter=10)
-
 
     content = [title, Spacer(1, 24), file_name_para, line, cluster_text, silhouette_text, score_text, Spacer(1,12)]
 
@@ -123,7 +123,11 @@ def main(file_key, threshold, algorithm, plot):
         content.append(agglom_img_obj)
     
     doc.build(content)
-    
     df.to_csv('./static/_doc/Result.csv')
+
+    csv_path = './static/_doc/Result.csv'
+    pdf_path = './static/_doc/Report.pdf'
+
+    return pdf_path, csv_path
 
 # main('./data/wine-clustering.csv', 0.5, 'both', 'yes')

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process File</title>
+</head>
+<body>
+    <h1>Process File: {{ filename }}</h1>
+    <form action="/process/{{ filename }}" method="post">
+        <label for="threshold">Threshold:</label>
+        <input type="text" id="threshold" name="threshold" value="0.5"><br><br>
+        <label for="algorithm">Algorithm:</label>
+        <select id="algorithm" name="algorithm">
+            <option value="both">Both</option>
+            <option value="k-Means">k-Means</option>
+            <option value="Agglomerative">Agglomerative</option>
+        </select><br><br>
+        <label for="plot">Generate Plots:</label>
+        <select id="plot" name="plot">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+        </select><br><br>
+        <input type="submit" value="Process">
+    </form>
+</body>
+</html>

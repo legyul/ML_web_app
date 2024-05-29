@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
@@ -13,6 +14,7 @@ from sklearn.cluster import AgglomerativeClustering
 from dotenv import load_dotenv
 import os
 import boto3
+from botocore.exceptions import ClientError
 
 load_dotenv()
 
@@ -26,20 +28,54 @@ s3 = boto3.client(
     aws_secret_access_key=AWS_SECRET_ACCESS_KEY
 )
 
+matplotlib.use('Agg')
+
 # Functions
 # Load dataset file
 def load_file(file_key):
-    file_path = f"/tmp/{file_key}"
-    s3.download_file(S3_BUCKET_NAME, file_key, file_path)
-    file_extention = file_path.split('.')[-1]
-    if file_extention == 'csv':
-        return pd.read_csv(file_path)
-    elif file_extention == 'xlsx':
-        return pd.read_excel(file_path)
-    elif file_extention == 'json':
-        return pd.read_json(file_path)
+    file_name = file_key.split('/')[-1]
+    file_path = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{file_name}"
+    
+    # Check if the file exists in S3 bucket
+    try:
+        s3.head_object(Bucket=S3_BUCKET_NAME, Key=file_name)
+    except ClientError as e:
+        if e.response['Error']['Code'] == '404':
+            raise FileNotFoundError(f"File '{file_name}' does not exist in S3 bucket '{S3_BUCKET_NAME}'")
+        else:
+            raise e
+    
+    # Download the file to a temporary directory
+    temp_file_path = f"/tmp/{file_name}"
+    with open(temp_file_path, 'wb') as f:
+        s3.download_fileobj(S3_BUCKET_NAME, file_name, f)
+    
+    # Determine file extension
+    file_extension = file_name.split('.')[-1]
+    
+    # Read the file based on its extension
+    if file_extension == 'csv':
+        return pd.read_csv(temp_file_path)
+    elif file_extension == 'xlsx':
+        return pd.read_excel(temp_file_path)
+    elif file_extension == 'json':
+        return pd.read_json(temp_file_path)
     else:
-        raise ValueError("Unsupported file format, use .csv, .xlsx, or .json")
+        raise ValueError("Unsupported file format. Supported formats are .csv, .xlsx, and .json")
+
+
+# def load_file(file_key):
+#     file_path = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{file_key}"
+#     s3.download_file(S3_BUCKET_NAME, file_key, file_path)
+#     file_extention = file_path.split('.')[-1]
+#     if file_extention == 'csv':
+#         return pd.read_csv(file_path)
+#     elif file_extention == 'xlsx':
+#         return pd.read_excel(file_path)
+#     elif file_extention == 'json':
+#         return pd.read_json(file_path)
+#     else:
+#         raise ValueError("Unsupported file format, use .csv, .xlsx, or .json")
 
 # Find the useful variables to cluster
 def identify_variable(data, threshold):
@@ -86,16 +122,16 @@ def elbow(data):
         dis.append(numerator / denominator)
     
     elbow_point = dis.index(max(dis)) + 2
-    
+
+    return elbow_point, wcss
+
+def elbow_plot(elbow_point, wcss):
     plt.plot(range(1, 11), wcss, marker='o')
     plt.axvline(elbow_point, color='b', linestyle='-')
     plt.xlabel('Number of clusters')
     plt.ylabel('WCSS')
     plt.title('Elbow Method')
     plt.savefig('./static/_img/Elbow_Method.png')
-    plt.show()
-
-    return elbow_point
 
 # Algorithm for choosing the number of clusters. 
 def choose_cluster(elbow, silhouette):
@@ -219,5 +255,5 @@ class silhouetteAnalyze:
         plt.ylabel('Silhouette Score')
         plt.title('Silhouette Method')
         plt.savefig('./static/_img/Silhouette_Method.png')
-        plt.show()
+        #plt.show()
 
