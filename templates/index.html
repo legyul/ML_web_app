@@ -5,41 +5,10 @@
     <title>File Upload</title>
   </head>
   <body>
-    <h1>Upload CSV File for Clustering</h1>
+    <h1>Upload Your File for Clustering</h1>
     <form action="/upload" method="post" enctype="multipart/form-data">
       <input type="file" name="file"><br><br>
       <input type="submit" value="Upload">
     </form>
   </body>
 </html>
-
-<!-- <!doctype html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clustering App</title>
-</head>
-<body>
-    <h1>Upload a file for Clustering</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <label for="file">Choose file:</label>
-        <input type="file" id="file" name="file" required><br><br>
-        
-        <label for="threshold">Correlation Threshold:</label>
-        <input type="number" step="0.01" id="threshold" name="threshold" required><br><br>
-        
-        <label for="algorithm">Choose algorithm:</label>
-        <select id="algorithm" name="algorithm">
-            <option value="k-Means">k-Means</option>
-            <option value="Agglomerative Clustering">Agglomerative Clustering</option>
-            <option value="both">Both</option>
-        </select><br><br>
-        
-        <label for="plot">Generate plots:</label>
-        <input type="checkbox" id="plot" name="plot" value="yes"><br><br>
-        
-        <input type="submit" value="Upload">
-    </form>
-</body>
-</html> -->

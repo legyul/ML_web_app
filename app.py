@@ -1,6 +1,6 @@
 import os
 from clustering_main import main
-from flask import Flask, render_template, request, redirect, url_for, send_file
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash
 from werkzeug.utils import secure_filename
 import boto3
 from dotenv import load_dotenv
@@ -51,23 +51,78 @@ def upload_file():
     if file:
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(file_path)
-        s3.upload_file(file_path, S3_BUCKET_NAME, file.filename)
-        os.remove(file_path)  # 업로드 후에 로컬 파일 삭제
+        
+        s3_file_path = f"uploaded/{file.filename}"
+        s3.upload_file(file_path, S3_BUCKET_NAME, s3_file_path)
+        os.remove(file_path)
         return redirect(url_for('process_file', filename=file.filename))
+
+def delete_file_from_s3(bucket_name, file_key):
+    s3.delete_object(Bucket=bucket_name, Key=file_key)
+    print(f"File {file_key} deleted from S3 bucket {bucket_name}")
 
 @app.route('/process/<filename>', methods=['GET', 'POST'])
 def process_file(filename):
-    s3_file_path = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{filename}"
+    s3_file_path = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/uploaded/{filename}"
+    
     if request.method == 'POST':
         threshold = float(request.form.get('threshold'))
         algorithm = request.form.get('algorithm')
         plot = request.form.get('plot')
 
-        pdf_path, csv_path = main(s3_file_path, threshold, algorithm, plot)
+        try:
+            # Implement main function and generate report and result file
+            pdf_file, csv_file = main(s3_file_path, threshold, algorithm, plot)
 
-        return render_template('result.html', pdf_path=pdf_path, csv_path=csv_path)
+            result_folder_path = "result/"
+
+            # Upload generated report and result file to S3 bucket
+            pdf_s3_key = upload_to_s3(pdf_file, S3_BUCKET_NAME)
+            csv_s3_key = upload_to_s3(csv_file, S3_BUCKET_NAME)
+
+            # Generate presigned URL
+            pdf_url = generate_presigned_url(S3_BUCKET_NAME, pdf_s3_key)
+            csv_url = generate_presigned_url(S3_BUCKET_NAME, csv_s3_key)
+
+            print(f"PDF URL: {pdf_url}")
+            print(f"CSV URL: {csv_url}")
+
+            return render_template('result.html', pdf_url=pdf_url, csv_url=csv_url)
+        
+        # If file extention is not suported, delet the file from S3 Bucket
+        except ValueError as e:
+            flash(str(e))
+
+            delete_file_from_s3(S3_BUCKET_NAME, s3_file_path)
+            return redirect(request.url)
 
     return render_template('process.html', filename=filename)
+
+# Upload generated files to S3 bucket
+def upload_to_s3(file_name, bucket_name):
+    try:
+        s3.upload_file(file_name, bucket_name, f'result/{file_name}')
+        print(f"File {file_name} uploaded to S3 bucket {bucket_name} as {file_name}.\n")
+        return file_name
+    
+    except Exception as e:
+        print(f"Error uploading {file_name}: {str(e)}")
+        return None
+
+# Generate presigned URL to able download files
+def generate_presigned_url(bucket_name, s3_key, expiration=36000):
+    try:
+        result_path = 'result/'
+        response = s3.generate_presigned_url('get_object',
+                                             Params={'Bucket': bucket_name, 'Key': result_path + s3_key},
+                                             ExpiresIn=expiration)
+        print(f"Generated URL for {s3_key}\n")
+        print(response)
+        return response
+    except Exception as e:
+        print(f"Error generating presigned URL for {s3_key}: {str(e)}")
+        return None
+
 # @app.route('/')
 # def index():
 #     return render_template('index.html')

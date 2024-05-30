@@ -12,7 +12,7 @@ def main(file_key, threshold, algorithm, plot):
     file_name = Path(file_key).stem
     
     # Create a PDF document
-    doc = SimpleDocTemplate("./static/_doc/Report.pdf", pagesize=letter)
+    doc = SimpleDocTemplate(f"{file_name}_{algorithm}_{threshold}_Report.pdf", pagesize=letter)
     styles = getSampleStyleSheet()
 
     title = Paragraph("Clustering Report", styles['Title'])
@@ -54,8 +54,11 @@ def main(file_key, threshold, algorithm, plot):
         pca = perform_pca(filtered_df)
         
         pca_df = pd.DataFrame(pca)
-        pca_df['k-Means Cluster'] = df['k-Means Cluster']
-        pca_df['Agglomerative Cluster'] = df['Agglomerative Cluster']
+        if 'k-Means Cluster' in df.columns:
+            pca_df['k-Means Cluster'] = df['k-Means Cluster']
+        
+        elif 'Agglomerative Cluster' in df.columns:
+            pca_df['Agglomerative Cluster'] = df['Agglomerative Cluster']
 
         plot_cluster(pca_df)
 
@@ -123,10 +126,10 @@ def main(file_key, threshold, algorithm, plot):
         content.append(agglom_img_obj)
     
     doc.build(content)
-    df.to_csv('./static/_doc/Result.csv')
+    df.to_csv(f'{file_name}_{algorithm}_{threshold}_Result.csv')
 
-    csv_path = './static/_doc/Result.csv'
-    pdf_path = './static/_doc/Report.pdf'
+    csv_path = f'{file_name}_{algorithm}_{threshold}_Result.csv'
+    pdf_path = f'{file_name}_{algorithm}_{threshold}_Report.pdf'
 
     return pdf_path, csv_path
 

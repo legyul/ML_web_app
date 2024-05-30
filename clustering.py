@@ -34,11 +34,11 @@ matplotlib.use('Agg')
 # Load dataset file
 def load_file(file_key):
     file_name = file_key.split('/')[-1]
-    file_path = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{file_name}"
+    file_path = f"uploaded/{file_name}"
     
     # Check if the file exists in S3 bucket
     try:
-        s3.head_object(Bucket=S3_BUCKET_NAME, Key=file_name)
+        s3.head_object(Bucket=S3_BUCKET_NAME, Key=file_path)
     except ClientError as e:
         if e.response['Error']['Code'] == '404':
             raise FileNotFoundError(f"File '{file_name}' does not exist in S3 bucket '{S3_BUCKET_NAME}'")
@@ -48,7 +48,7 @@ def load_file(file_key):
     # Download the file to a temporary directory
     temp_file_path = f"/tmp/{file_name}"
     with open(temp_file_path, 'wb') as f:
-        s3.download_fileobj(S3_BUCKET_NAME, file_name, f)
+        s3.download_fileobj(S3_BUCKET_NAME, f'uploaded/{file_name}', f)
     
     # Determine file extension
     file_extension = file_name.split('.')[-1]
@@ -63,19 +63,6 @@ def load_file(file_key):
     else:
         raise ValueError("Unsupported file format. Supported formats are .csv, .xlsx, and .json")
 
-
-# def load_file(file_key):
-#     file_path = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/{file_key}"
-#     s3.download_file(S3_BUCKET_NAME, file_key, file_path)
-#     file_extention = file_path.split('.')[-1]
-#     if file_extention == 'csv':
-#         return pd.read_csv(file_path)
-#     elif file_extention == 'xlsx':
-#         return pd.read_excel(file_path)
-#     elif file_extention == 'json':
-#         return pd.read_json(file_path)
-#     else:
-#         raise ValueError("Unsupported file format, use .csv, .xlsx, or .json")
 
 # Find the useful variables to cluster
 def identify_variable(data, threshold):
@@ -173,7 +160,7 @@ def agglomerative(data, n_cluster):
     return labels
 
 # Choose which clustering algorithm will be run, depend on the user's choice
-def choose_algo(data, n_cluster, algorithm='both'):
+def choose_algo(data, n_cluster, algorithm):
     if algorithm == 'k-Means':
         return kmeans(data, n_cluster)
     
@@ -255,5 +242,5 @@ class silhouetteAnalyze:
         plt.ylabel('Silhouette Score')
         plt.title('Silhouette Method')
         plt.savefig('./static/_img/Silhouette_Method.png')
-        #plt.show()
+
 
