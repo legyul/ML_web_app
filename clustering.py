@@ -112,13 +112,13 @@ def elbow(data):
 
     return elbow_point, wcss
 
-def elbow_plot(elbow_point, wcss):
+def elbow_plot(elbow_point, wcss, file_name, algorithm, threshold):
     plt.plot(range(1, 11), wcss, marker='o')
     plt.axvline(elbow_point, color='b', linestyle='-')
     plt.xlabel('Number of clusters')
     plt.ylabel('WCSS')
-    plt.title('Elbow Method')
-    plt.savefig('./static/_img/Elbow_Method.png')
+    plt.title(f'{file_name}_{threshold}_Elbow Method')
+    plt.savefig(f'./static/_img/{file_name}_{threshold}_{algorithm}_Elbow_Method.png')
 
 # Algorithm for choosing the number of clusters. 
 def choose_cluster(elbow, silhouette):
@@ -164,39 +164,28 @@ def choose_algo(data, n_cluster, algorithm):
     if algorithm == 'k-Means':
         return kmeans(data, n_cluster)
     
-    elif algorithm == 'Agglomerative Clustering':
+    elif algorithm == 'Agglomerative':
         return agglomerative(data, n_cluster)
     
     else:
         return kmeans(data, n_cluster), agglomerative(data, n_cluster)
 
 # Generate the cluster plots, depending on the user's choice
-def plot_cluster(pca_df):
-    # If user choose both algorithms, plot both
-    if 'k-Means Cluster' and 'Agglomerative Cluster' in pca_df.columns:
-        axs_k = plt.subplots()
-        axs_k = sns.scatterplot(x=pca_df[0], y=pca_df[1], hue='k-Means Cluster', data=pca_df)
-        plt.title('k-Means Cluster')
-        plt.savefig('./static/_img/k-Means_Cluster.png')
-
-        axs_a = plt.subplots()
-        axs_a = sns.scatterplot(x=pca_df[0], y=pca_df[1], hue='Agglomerative Cluster', data=pca_df)
-        plt.title('Agglomerative Cluster')
-        plt.savefig('./static/_img/Agglomerative_Cluster.png')
+def plot_cluster(pca_df, file_name, algorithm, threshold):
     
     # If user choose only Agglomerative clustering algorithm, then plot agglomerative cluster
-    elif 'Agglomerative Cluster' in pca_df.columns:
+    if 'Agglomerative Cluster' in pca_df.columns:
         axs = plt.subplots()
         axs = sns.scatterplot(x=pca_df[0], y=pca_df[1], hue='Agglomerative Cluster', data=pca_df)
-        plt.title('Agglomerative Cluster')
-        plt.savefig('./static/_img/Agglomerative_Cluster.png')
+        plt.title(f'{file_name} {threshold} {algorithm} Cluster')
+        plt.savefig(f'./static/_img/{file_name}_{threshold}_Agglomerative_Cluster.png')
     
     # If user choose only k-Means clustering algorithm, then plot k-Means cluster
-    elif 'k-Means Cluster' in pca_df.columns:
+    if 'k-Means Cluster' in pca_df.columns:
         axs = plt.subplots()
         axs = sns.scatterplot(x=pca_df[0], y=pca_df[1], hue='k-Means Cluster', data=pca_df)
-        plt.title('k-Means Cluster')
-        plt.savefig('./static/_img/k-Means_Cluster.png')
+        plt.title(f'{file_name} {threshold} {algorithm} Cluster')
+        plt.savefig(f'./static/_img/{file_name}_{threshold}_k-Means_Cluster.png')
 
 # Determine optimal number of clusters using silhouette method
 class silhouetteAnalyze:
@@ -231,7 +220,7 @@ class silhouetteAnalyze:
         
         return self.silhouette_scores
     
-    def plot(self):
+    def plot(self, file_name, algorithm, threshold):
         if self.silhouette_scores is None:
             print("Call analyze() method first to compute silhouette scores.")
             return
@@ -240,7 +229,7 @@ class silhouetteAnalyze:
         plt.axvline(self.optimal_clusters, color='b', linestyle='-')
         plt.xlabel('Number of clusters')
         plt.ylabel('Silhouette Score')
-        plt.title('Silhouette Method')
-        plt.savefig('./static/_img/Silhouette_Method.png')
+        plt.title(f'{file_name}_{threshold}_Silhouette Method')
+        plt.savefig(f'./static/_img/{file_name}_{threshold}_{algorithm}_Silhouette_Method.png')
 
 

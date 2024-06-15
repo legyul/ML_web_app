@@ -2,6 +2,38 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>Clustering Parameters</title>
+</head>
+<body>
+    <h1>Clustering Parameters for {{ filename }}</h1>
+    <form action="" method="post">
+        <label for="threshold">Threshold:</label>
+        <input type="number" step="0.01" name="threshold" id="threshold" required>
+        <br>
+        <label for="algorithm">Algorithm:</label>
+        <select name="algorithm" id="algorithm">
+            <option value="k-Means">k-Means</option>
+            <option value="Agglomerative">Agglomerative</option>
+            <option value="both">Both</option>
+        </select>
+        <br>
+        <label for="plot">Generate Plots:</label>
+        <select name="plot" id="plot">
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+        </select>
+        <br>
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>
+
+
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Process File</title>
 </head>
@@ -24,4 +56,4 @@
         <input type="submit" value="Process">
     </form>
 </body>
-</html>
+</html> -->

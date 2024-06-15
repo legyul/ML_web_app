@@ -10,7 +10,7 @@ def main(file_key, threshold, algorithm, plot):
     # Call the file and save it to a variable, df
     df = load_file(file_key)
     file_name = Path(file_key).stem
-    
+    print("Algorithm : ", algorithm)
     # Create a PDF document
     doc = SimpleDocTemplate(f"{file_name}_{algorithm}_{threshold}_Report.pdf", pagesize=letter)
     styles = getSampleStyleSheet()
@@ -26,13 +26,13 @@ def main(file_key, threshold, algorithm, plot):
 
     # Elbow method to determine the number of clusters
     elbow_cluster, wcss = elbow(filtered_df)
-    elbow_plot(elbow_cluster, wcss)
+    elbow_plot(elbow_cluster, wcss, file_name, algorithm, threshold)
 
     # Silhouette method to determine the number of clusters
     silhouette = silhouetteAnalyze(filtered_df)
     silhouette.analyze()
     silhou_cluster = silhouette.get_optimal_clusters()
-    silhouette.plot()
+    silhouette.plot(file_name, algorithm, threshold)
 
     n_cluster, cluster_info = choose_cluster(elbow_cluster, silhou_cluster)
 
@@ -46,7 +46,7 @@ def main(file_key, threshold, algorithm, plot):
         kmeans_label = cluster
         df['k-Means Cluster'] = kmeans_label
         
-    else:
+    elif algorithm == 'Agglomerative':
         agglom_label = cluster
         df['Agglomerative Cluster'] = agglom_label
 
@@ -60,7 +60,7 @@ def main(file_key, threshold, algorithm, plot):
         elif 'Agglomerative Cluster' in df.columns:
             pca_df['Agglomerative Cluster'] = df['Agglomerative Cluster']
 
-        plot_cluster(pca_df)
+        plot_cluster(pca_df, file_name, algorithm, threshold)
 
         scores = silhouette.get_silhouette_scores()
         scores = scores[n_cluster - 2]
@@ -89,7 +89,7 @@ def main(file_key, threshold, algorithm, plot):
 
     content = [title, Spacer(1, 24), file_name_para, line, cluster_text, silhouette_text, score_text, Spacer(1,12)]
 
-    elbow_img = './static/_img/Elbow_Method.png'
+    elbow_img = f'./static/_img/{file_name}_{threshold}_{algorithm}_Elbow_Method.png'
     if elbow_img:
         plot_img = plt.imread(elbow_img)
         img_width = 400
@@ -98,7 +98,7 @@ def main(file_key, threshold, algorithm, plot):
         content.append(Spacer(1, 12))
         content.append(elbow_img_obj)
 
-    silhouette_img = './static/_img/Silhouette_Method.png'
+    silhouette_img = f'./static/_img/{file_name}_{threshold}_{algorithm}_Silhouette_Method.png'
     if silhouette_img:
         plot_img = plt.imread(silhouette_img)
         img_width = 400
@@ -107,8 +107,11 @@ def main(file_key, threshold, algorithm, plot):
         content.append(Spacer(1, 12))
         content.append(silhouette_img_obj)
 
-    kmeans_img = './static/_img/k-Means_Cluster.png'
-    if kmeans_img:
+    kmeans_img = f'./static/_img/{file_name}_{threshold}_k-Means_Cluster.png'
+    agglom_img = f'./static/_img/{file_name}_{threshold}_Agglomerative_Cluster.png'
+
+    if algorithm == 'both':
+        # k-Means plot
         plot_img = plt.imread(kmeans_img)
         img_width = 400
         img_height = img_width * plot_img.shape[0] / plot_img.shape[1]
@@ -116,14 +119,29 @@ def main(file_key, threshold, algorithm, plot):
         content.append(Spacer(1, 12))
         content.append(kmeans_img_obj)
 
-    agglom_img = './static/_img/Agglomerative_Cluster.png'
-    if agglom_img:
+        # Agglomerative plot
         plot_img = plt.imread(agglom_img)
         img_width = 400
         img_height = img_width * plot_img.shape[0] / plot_img.shape[1]
         agglom_img_obj = Image(agglom_img, width=img_width, height=img_height)
         content.append(Spacer(1, 12))
         content.append(agglom_img_obj)
+
+    elif algorithm == 'Agglomerative':
+        plot_img = plt.imread(agglom_img)
+        img_width = 400
+        img_height = img_width * plot_img.shape[0] / plot_img.shape[1]
+        agglom_img_obj = Image(agglom_img, width=img_width, height=img_height)
+        content.append(Spacer(1, 12))
+        content.append(agglom_img_obj)
+
+    elif algorithm == 'k-Means':
+        plot_img = plt.imread(kmeans_img)
+        img_width = 400
+        img_height = img_width * plot_img.shape[0] / plot_img.shape[1]
+        kmeans_img_obj = Image(kmeans_img, width=img_width, height=img_height)
+        content.append(Spacer(1, 12))
+        content.append(kmeans_img_obj)
     
     doc.build(content)
     df.to_csv(f'{file_name}_{algorithm}_{threshold}_Result.csv')
