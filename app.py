@@ -55,6 +55,7 @@ def upload_file():
     
     file = request.files['file']
     task = request.form.get('task')
+    print(task)
     if file.filename == '':
         return redirect(request.url)
     if file:

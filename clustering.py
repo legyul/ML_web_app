@@ -75,13 +75,29 @@ def identify_variable(data, threshold):
     return variables
 
 def preprocessing_data(data):
-    data.fillna(data.mean(), inplace=True)
+    data.dropna(axis=0, how='all', inplace=True)
+    numeric_cols = data.select_dtypes(include=[np.number])
+    data[numeric_cols.columns] = numeric_cols.fillna(numeric_cols.mean())
+    data.columns = data.columns.str.lower()
+
+    labels = []
+    uniques = []
+    
+    if 'sex' in data.columns:
+        data['sex'].str.lower()
+        labels, uniques = pd.factorize(data['sex'])
+        data['sex'] = labels
+    
+    if 'gender' in data.columns:
+        data['gender'].str.lower()
+        labels, uniques = pd.factorize(data['gender'])
+        data['gender'] = labels
 
     scaler = StandardScaler()
     scaled_data = scaler.fit_transform(data)
     scaled_df = pd.DataFrame(scaled_data, columns=data.columns)
 
-    return scaled_df
+    return scaled_df, labels, uniques
 
 def perform_pca(data):
     pca = PCA(n_components=2)
@@ -113,6 +129,7 @@ def elbow(data):
     return elbow_point, wcss
 
 def elbow_plot(elbow_point, wcss, file_name, algorithm, threshold):
+    plt.clf()
     plt.plot(range(1, 11), wcss, marker='o')
     plt.axvline(elbow_point, color='b', linestyle='-')
     plt.xlabel('Number of clusters')
@@ -131,12 +148,12 @@ def choose_cluster(elbow, silhouette):
 
         if abs(elbow - silhouette) > 1:
             cluster_info += "The difference between the two methods is significant.\n"
-            cluster_info += "Choosing the number of clusters based on silhouette method.\n"
+            cluster_info += " Choosing the number of clusters based on silhouette method.\n"
             chosen_cluster = silhouette
         
         else:
             cluster_info += "The difference between the two methods is not significant."
-            cluster_info += "Choosing the number of clusters based on their average."
+            cluster_info += " Choosing the number of clusters based on their average."
             chosen_cluster = int((elbow + silhouette) / 2)
     
     else:
@@ -225,6 +242,7 @@ class silhouetteAnalyze:
             print("Call analyze() method first to compute silhouette scores.")
             return
         
+        plt.clf()
         plt.plot(range(2, 11), self.silhouette_scores, marker='o')
         plt.axvline(self.optimal_clusters, color='b', linestyle='-')
         plt.xlabel('Number of clusters')
