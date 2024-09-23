@@ -6,64 +6,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-from sklearn.cluster import DBSCAN
 from sklearn.cluster import AgglomerativeClustering
-from dotenv import load_dotenv
-import os
-import boto3
-from botocore.exceptions import ClientError
-
-load_dotenv()
-
-S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
-AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-
-s3 = boto3.client(
-    's3',
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY
-)
 
 matplotlib.use('Agg')
 
 # Functions
-# Load dataset file
-def load_file(file_key):
-    file_name = file_key.split('/')[-1]
-    file_path = f"uploaded/{file_name}"
-    
-    # Check if the file exists in S3 bucket
-    try:
-        s3.head_object(Bucket=S3_BUCKET_NAME, Key=file_path)
-    except ClientError as e:
-        if e.response['Error']['Code'] == '404':
-            raise FileNotFoundError(f"File '{file_name}' does not exist in S3 bucket '{S3_BUCKET_NAME}'")
-        else:
-            raise e
-    
-    # Download the file to a temporary directory
-    temp_file_path = f"/tmp/{file_name}"
-    with open(temp_file_path, 'wb') as f:
-        s3.download_fileobj(S3_BUCKET_NAME, f'uploaded/{file_name}', f)
-    
-    # Determine file extension
-    file_extension = file_name.split('.')[-1]
-    
-    # Read the file based on its extension
-    if file_extension == 'csv':
-        return pd.read_csv(temp_file_path)
-    elif file_extension == 'xlsx':
-        return pd.read_excel(temp_file_path)
-    elif file_extension == 'json':
-        return pd.read_json(temp_file_path)
-    else:
-        raise ValueError("Unsupported file format. Supported formats are .csv, .xlsx, and .json")
-
-
 # Find the useful variables to cluster
 def identify_variable(data, threshold):
     corr_matrix = data.corr()
@@ -73,31 +22,6 @@ def identify_variable(data, threshold):
     variables = list(set([item for sublist in variables for item in sublist]))
 
     return variables
-
-def preprocessing_data(data):
-    data.dropna(axis=0, how='all', inplace=True)
-    numeric_cols = data.select_dtypes(include=[np.number])
-    data[numeric_cols.columns] = numeric_cols.fillna(numeric_cols.mean())
-    data.columns = data.columns.str.lower()
-
-    labels = []
-    uniques = []
-    
-    if 'sex' in data.columns:
-        data['sex'].str.lower()
-        labels, uniques = pd.factorize(data['sex'])
-        data['sex'] = labels
-    
-    if 'gender' in data.columns:
-        data['gender'].str.lower()
-        labels, uniques = pd.factorize(data['gender'])
-        data['gender'] = labels
-
-    scaler = StandardScaler()
-    scaled_data = scaler.fit_transform(data)
-    scaled_df = pd.DataFrame(scaled_data, columns=data.columns)
-
-    return scaled_df, labels, uniques
 
 def perform_pca(data):
     pca = PCA(n_components=2)

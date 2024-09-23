@@ -1,4 +1,5 @@
-from clustering import load_file, Path, preprocessing_data, identify_variable, elbow, elbow_plot, silhouetteAnalyze, choose_cluster, choose_algo, perform_pca, plot_cluster, pd, plt
+from clustering import Path, identify_variable, elbow, elbow_plot, silhouetteAnalyze, choose_cluster, choose_algo, perform_pca, plot_cluster, pd, plt
+import common
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, HRFlowable, Table, TableStyle
@@ -8,7 +9,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 def main(file_key, threshold, algorithm, plot):
 
     # Call the file and save it to a variable, df
-    df = load_file(file_key)
+    df = common.load_file(file_key)
     file_name = Path(file_key).stem
     print("Algorithm : ", algorithm)
     # Create a PDF document
@@ -19,7 +20,7 @@ def main(file_key, threshold, algorithm, plot):
     title = Paragraph("Clustering Report", styles['Title'])
     file_name_para = Paragraph(f"File Name: {file_name}", styles['Normal'])
 
-    pre_df, label, unique = preprocessing_data(df)
+    pre_df, label, unique = common.preprocessing_data(df)
 
     if len(label) != 0:
         print('label:', label)
@@ -280,6 +281,8 @@ def main(file_key, threshold, algorithm, plot):
 
     csv_path = f'{file_name}_{algorithm}_{threshold}_Result.csv'
     pdf_path = f'{file_name}_{algorithm}_{threshold}_Report.pdf'
+
+    print("main ended")
 
     return pdf_path, csv_path
 
