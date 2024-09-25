@@ -6,12 +6,21 @@ import boto3
 from dotenv import load_dotenv
 from flask_swagger_ui import get_swaggerui_blueprint
 import logging
+from pyspark import SparkConf, SparkContext
 
 # Load environment variables from .env file
 load_dotenv()
 
 template_dir = os.path.abspath('./templates')
 app = Flask(__name__, template_folder=template_dir)
+
+# Setting the port that Spark UI uses
+conf = SparkConf().setAppName("DataPreprocessing").setMaster("local[*]")
+
+if SparkContext._active_spark_context:
+    SparkContext._active_spark_context.stop()
+
+sc = SparkContext.getOrCreate(conf=conf)
 
 #print("Template directory: ", os.path.abspath('./templates'))
 # S3 Client configuration

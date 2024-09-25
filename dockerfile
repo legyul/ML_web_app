@@ -33,3 +33,5 @@ ENV FLASK_APP=app.py
 
 # 7. Run Flask server
 CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "app:app"]
+
+EXPOSE 8080
