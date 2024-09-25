@@ -1,30 +1,35 @@
-# 1. 베이스 이미지로 Python 3.9 버전을 사용
+# Use Python 3.11 for base image
 FROM python:3.11
 
-# Java 설치
+# Install Java
 RUN apt-get update && apt-get install -y openjdk-17-jdk
 
-# JAVA_HOME 환경 변수 설정
+# Set JAVA_HOME environment
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-arm64
 ENV PATH=$JAVA_HOME/bin:$PATH
 
-# 2. 컨테이너 안에서 작업 디렉토리를 /app으로 설정
+# 2. Set /app for working directory in the container
 WORKDIR /app
 
-# 3. 현재 디렉토리의 모든 파일을 컨테이너의 /app으로 복사
+# 3. Copy all files in the current directory to /app in the container
 COPY src/ .
+COPY ./src /app/src
+COPY ./templates /app/templates
+COPY ./static /app/static
+COPY ./data /app/data
+COPY requirements.txt /app/
 
-# 4. 필요 패키지를 설치
+# 4. Install requirement files
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 # PySpark 설치
-RUN pip install pyspark
+#RUN pip install pyspark
 
-# 5. 컨테이너 외부에서 접근할 수 있도록 5000번 포트를 노출
+# 5. Expose port 5000 for access from outside the container
 EXPOSE 5000
 
-# 6. 환경 변수 설정 (Flask의 기본 실행 파일 설정)
+# 6. Setting environment variables (setting the default executable in Flask)
 ENV FLASK_APP=app.py
 
-# 7. Flask 서버 실행
-CMD ["flask", "run", "--host=0.0.0.0", "-p", "5000"]
+# 7. Run Flask server
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8080", "app:app"]

@@ -13,7 +13,7 @@ load_dotenv()
 template_dir = os.path.abspath('./templates')
 app = Flask(__name__, template_folder=template_dir)
 
-print("Template directory: ", os.path.abspath('./templates'))
+#print("Template directory: ", os.path.abspath('./templates'))
 # S3 Client configuration
 s3 = boto3.client(
     's3',
@@ -148,7 +148,7 @@ def generate_presigned_url(bucket_name, s3_key, expiration=36000):
         return None
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
 
 
 # import os
