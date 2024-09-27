@@ -157,7 +157,7 @@ def generate_presigned_url(bucket_name, s3_key, expiration=36000):
         return None
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True)
 
 
 # import os
