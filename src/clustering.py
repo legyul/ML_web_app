@@ -1,6 +1,7 @@
 # Load libraries
 from pathlib import Path
 import pandas as pd
+from common import spark, spark_processing, pandas_processing
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -14,20 +15,92 @@ matplotlib.use('Agg')
 
 # Functions
 # Find the useful variables to cluster
-def identify_variable(data, threshold):
-    corr_matrix = data.corr()
-    upper_triangle = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool_))
+def eliminate_high_correlation(data, threshold=0.8):
+    # Eliminate the highly correlated features
+    
+    if isinstance(data, pd.DataFrame):
+        corr_matrix = data.corr()
+        upper_triangle = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k = 1).astype(bool))
+        to_drop = [column for column in upper_triangle.columns if any(upper_triangle[column] > threshold)]
+        return data.drop(columns = to_drop)
+    
+    elif isinstance(data, spark.sql.dataframe.DataFrame):
+        columns = data.columns
+        to_drop = set()  # 제거할 컬럼을 저장할 집합
 
-    variables = (upper_triangle[upper_triangle > threshold]).stack().index.tolist()
-    variables = list(set([item for sublist in variables for item in sublist]))
+        # 각 컬럼 간 상관 관계 계산
+        for i in range(len(columns)):
+            for j in range(i + 1, len(columns)):
+                col1, col2 = columns[i], columns[j]
+                corr_value = data.stat.corr(col1, col2)
+                if corr_value > threshold:
+                    # 높은 상관 관계를 가진 컬럼을 제거할 목록에 추가
+                    to_drop.add(col2)
 
-    return variables
+        data_cleaned = data.drop(*to_drop)
 
-def perform_pca(data):
+        return data_cleaned
+
+def eliminate_low_variance(data, threshold=0.01):
+    # Eliminate the low variacne features
+    from sklearn.feature_selection import VarianceThreshold
+
+    selector = VarianceThreshold(threshold=threshold)
+    reduce = selector.fit_transform(data)
+    return pd.DataFrame(reduce, columns=data.columns[selector.get_support()])
+
+def apply_pca(data, variance_threshold=0.95, max_component=10):
+    pca_info = ""
+    # Check the number of variance
+    n_features = data.shape[1]
+    if n_features < 2:
+        pca_info += "Insufficient features after filtering. Returning original data."
+        return data, pca_info
+    
+    # Using PCA calculate the ratio of cumulative variance
+    pca = PCA()
+    pca.fit(data)
+    cumulative_variance = pca.explained_variance_ratio_.cumsum()
+
+    # Determining the minimum number of components based on variance ratio
+    n_components_by_variance = (cumulative_variance < variance_threshold).sum() + 1
+    n_components = min(n_components_by_variance, max_component, n_features)
+
+    n_components = max(n_components, 2) if n_features > 1 else 1
+    pca_info += f"(explained variance threshold: {variance_threshold * 100}%)."
+
+    # Apply PCA
+    pca = PCA(n_components= n_components)
+    reduced_data = pca.fit_transform(data)
+    reduced_data = pd.DataFrame(reduced_data, columns=[f"PC{i+1}" for i in range(n_components)], index=data.index)
+
+    component_importance = pd.DataFrame(pca.components_, columns=data.columns, index=[f"PC{i+1}" for i in range(n_components)])
+
+    return reduced_data, component_importance, pca_info
+
+def filter_data(data, threshold_corr=0.8, threshold_var=0.01, explained_variance=0.95, max_components=10):
+    # Filter the highly correlated features
+    data = eliminate_high_correlation(data, threshold=threshold_corr)
+
+    # Filter the low variacne features
+    data = eliminate_low_variance(data, threshold=threshold_var)
+
+    # Apply PCA
+    data, component_importane, pca_info = apply_pca(data, variance_threshold=explained_variance, max_component=max_components)
+
+    return data, component_importane, pca_info
+
+# Perform PCA for visualization
+def visualize_pca(data, mode):
+    if mode == 'spark':
+        scaled_data = spark_processing.spark_scaled_df(data)
+    
+    elif mode == 'pandas':
+        scaled_data = pandas_processing.pandas_scale_df(data)
     pca = PCA(n_components=2)
-    transform_data = pca.fit_transform(data)
+    pca_data = pca.fit_transform(scaled_data)
 
-    return transform_data
+    return pca_data
 
 # Determine optimal number of clusters using elbow method
 def elbow(data):
@@ -63,6 +136,7 @@ def elbow_plot(elbow_point, wcss, file_name, algorithm, threshold):
 
 # Algorithm for choosing the number of clusters. 
 def choose_cluster(elbow, silhouette):
+    chosen_cluster = 0
     cluster_info = ""
 
     # If the values of elbow method and silhouette method are different, 

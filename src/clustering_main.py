@@ -1,4 +1,4 @@
-from clustering import Path, identify_variable, elbow, elbow_plot, silhouetteAnalyze, choose_cluster, choose_algo, perform_pca, plot_cluster, pd, plt
+from clustering import Path, filter_data, elbow, elbow_plot, silhouetteAnalyze, choose_cluster, choose_algo, visualize_pca, plot_cluster, pd, plt
 import common
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
@@ -9,29 +9,30 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 def main(file_key, threshold, algorithm, plot):
 
     # Call the file and save it to a variable, df
-    df = common.load_file(file_key)
+    df, mode = common.load_file(file_key)
+    if mode == 'spark':
+        df = df.na.drop(how='all')
+    else:
+        df = df.dropna(how='all')
     file_name = Path(file_key).stem
-    print("Algorithm : ", algorithm)
+    
     # Create a PDF document
-    doc = SimpleDocTemplate(f"{file_name}_{algorithm}_{threshold}_Report.pdf", pagesize=letter)
+    doc = SimpleDocTemplate(f"./static/_doc/{file_name}_{algorithm}_{threshold}_Report.pdf", pagesize=letter)
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='Bold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=12))
 
     title = Paragraph("Clustering Report", styles['Title'])
     file_name_para = Paragraph(f"File Name: {file_name}", styles['Normal'])
 
-    pre_df, label, unique = common.preprocessing_data(df)
+    pre_df, gender_mapping = common.spark_processing.spark_preprocessing_data(df, mode)
 
-    if len(label) != 0:
-        print('label:', label)
-    
-    if len(unique) != 0:
-        print('unique: ', unique)
+    unique = list(gender_mapping.keys())
+    label = list(gender_mapping.values())
 
     # Reduce columns with the most relevant columns
-    variable_names = identify_variable(pre_df, threshold)
-    filtered_df = pre_df[variable_names]
-    useful_variable = f"Use {variable_names} to cluster."
+    filtered_df, variables, pca_info = filter_data(pre_df, threshold_corr=0.85, threshold_var=0.02, explained_variance=0.95, max_components=10)
+
+    useful_variable = f"Use {variables.columns} to cluster. {pca_info}"
 
     # Elbow method to determine the number of clusters
     elbow_cluster, wcss = elbow(filtered_df)
@@ -60,7 +61,7 @@ def main(file_key, threshold, algorithm, plot):
         df['Agglomerative Cluster'] = agglom_label
 
     if plot == 'yes':
-        pca = perform_pca(filtered_df)
+        pca = visualize_pca(filtered_df, mode)
         
         pca_df = pd.DataFrame(pca)
         if 'k-Means Cluster' in df.columns:
@@ -91,6 +92,7 @@ def main(file_key, threshold, algorithm, plot):
     
     silhouette_info = f"\nSilhouette Score: {scores}"
 
+    pca_text = Paragraph(pca_info, styles['Normal'])
     variable_text = Paragraph(useful_variable, styles['Normal'])
 
     cluster_text = Paragraph(cluster_info, styles['Normal'])
@@ -98,129 +100,13 @@ def main(file_key, threshold, algorithm, plot):
     score_text = Paragraph(score_info, styles['Normal'])
     line = HRFlowable(width="100%", thickness=1, lineCap='square', color="black", spaceBefore=10, spaceAfter=10)
 
-    content = [title, Spacer(1, 24), file_name_para, line, variable_text, Spacer(1, 12), Spacer(1, 12), cluster_text,
+    content = [title, Spacer(1, 24), file_name_para, line, pca_text, variable_text, Spacer(1, 12), Spacer(1, 12), cluster_text,
                 silhouette_text, score_text, Spacer(1,12)]
 
     if len(label) != 0 and len(unique) != 0:
         combined_text = ", ".join(f"{l}: {u}" for l, u in zip(label, unique))
         combined_paragraph = Paragraph(combined_text, styles['Normal'])
         content.insert(6, combined_paragraph)
-
-    # Print 5 samples of each cluster.
-    # kmeans_clusters = df['k-Means Cluster'].unique()
-    # agglom_clusters = df['Agglomerative Cluster'].unique()
-    # k_df = df.drop(columns=['Agglomerative Cluster'])
-    # a_df = df.drop(columns=['k-Means Cluster'])
-
-    # page_width, _ = landscape(letter)
-    # col_width = page_width / len(k_df.columns)
-
-    # if algorithm == 'both':
-    #     kmeans_text = Paragraph("k-Means Cluster samples:\n", styles['Bold'])
-    #     content.append(kmeans_text)
-    #     for cluster in kmeans_clusters:
-    #         k_samples = k_df[k_df['k-Means Cluster'] == cluster].sample(n=5, replace=True)
-            
-    #         # Add cluster header in bold
-    #         cluster_header = Paragraph(f"Cluster {cluster} samples:", styles['Normal'])
-    #         content.append(cluster_header)
-            
-    #         # Convert samples to table
-    #         data = [k_samples.columns.values.tolist()] + k_samples.values.tolist()
-    #         table = Table(data, colWidths=[min(col_width, 50)]*len(k_samples.columns))
-    #         table.setStyle(TableStyle([
-    #             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-    #             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-    #             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-    #             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-    #             ('FONTSIZE', (0, 0), (-1, -1), 6),  # Adjust font size to fit content
-    #             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-    #             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-    #             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    #             ('WORDWRAP', (0, 0), (-1, -1), 'CJK')
-    #         ]))
-    #         content.append(table)
-    #         content.append(Spacer(1, 12))
-        
-    #     agglom_text = Paragraph("Agglomerative Cluster samples:\n", styles['Bold'])
-    #     content.append(agglom_text)
-    #     for cluster in agglom_clusters:
-    #         a_samples = a_df[a_df['Agglomerative Cluster'] == cluster].sample(n=5, replace=True)
-            
-    #         # Add cluster header in bold
-    #         cluster_header = Paragraph(f"Cluster {cluster} samples:", styles['Normal'])
-    #         content.append(cluster_header)
-            
-    #         # Convert samples to table
-    #         data = [a_samples.columns.values.tolist()] + a_samples.values.tolist()
-    #         table = Table(data, colWidths=[min(col_width, 50)]*len(a_samples.columns))
-    #         table.setStyle(TableStyle([
-    #             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-    #             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-    #             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-    #             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-    #             ('FONTSIZE', (0, 0), (-1, -1), 6),  # Adjust font size to fit content
-    #             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-    #             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-    #             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    #             ('WORDWRAP', (0, 0), (-1, -1), 'CJK')
-    #         ]))
-    #         content.append(table)
-    #         content.append(Spacer(1, 12))
-
-    # elif algorithm == 'k-Means':
-    #     kmeans_text = Paragraph("k-Means Cluster samples:\n", styles['Normal'])
-    #     content.append(kmeans_text)
-    #     for cluster in kmeans_clusters:
-    #         k_samples = k_df[k_df['k-Means Cluster'] == cluster].sample(n=5, replace=True)
-            
-    #         # Add cluster header in bold
-    #         cluster_header = Paragraph(f"Cluster {cluster} samples:", styles['Bold'])
-    #         content.append(cluster_header)
-            
-    #         # Convert samples to table
-    #         data = [k_samples.columns.values.tolist()] + k_samples.values.tolist()
-    #         table = Table(data, colWidths=[min(col_width, 50)]*len(k_samples.columns))
-    #         table.setStyle(TableStyle([
-    #             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-    #             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-    #             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-    #             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-    #             ('FONTSIZE', (0, 0), (-1, -1), 6),  # Adjust font size to fit content
-    #             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-    #             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-    #             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    #             ('WORDWRAP', (0, 0), (-1, -1), 'CJK')
-    #         ]))
-    #         content.append(table)
-    #         content.append(Spacer(1, 12))
-
-    # elif algorithm == 'Agglomerative':
-    #     agglom_text = Paragraph("Agglomerative Cluster samples:\n", styles['Normal'])
-    #     content.append(agglom_text)
-    #     for cluster in agglom_clusters:
-    #         a_samples = a_df[a_df['Agglomerative Cluster'] == cluster].sample(n=5, replace=True)
-            
-    #         # Add cluster header in bold
-    #         cluster_header = Paragraph(f"Cluster {cluster} samples:", styles['Bold'])
-    #         content.append(cluster_header)
-            
-    #         # Convert samples to table
-    #         data = [a_samples.columns.values.tolist()] + a_samples.values.tolist()
-    #         table = Table(data, colWidths=[min(col_width, 50)]*len(a_samples.columns))
-    #         table.setStyle(TableStyle([
-    #             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-    #             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-    #             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-    #             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-    #             ('FONTSIZE', (0, 0), (-1, -1), 6),  # Adjust font size to fit content
-    #             ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-    #             ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-    #             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-    #             ('WORDWRAP', (0, 0), (-1, -1), 'CJK')
-    #         ]))
-    #         content.append(table)
-    #         content.append(Spacer(1, 12))
 
     elbow_img = f'./static/_img/{file_name}_{threshold}_{algorithm}_Elbow_Method.png'
     if elbow_img:
@@ -277,13 +163,11 @@ def main(file_key, threshold, algorithm, plot):
         content.append(kmeans_img_obj)
     
     doc.build(content)
-    df.to_csv(f'{file_name}_{algorithm}_{threshold}_Result.csv')
+    df.to_csv(f'./static/_doc/{file_name}_{algorithm}_{threshold}_Result.csv')
 
-    csv_path = f'{file_name}_{algorithm}_{threshold}_Result.csv'
-    pdf_path = f'{file_name}_{algorithm}_{threshold}_Report.pdf'
-
-    print("main ended")
+    csv_path = f'./static/_doc/{file_name}_{algorithm}_{threshold}_Result.csv'
+    pdf_path = f'./static/_doc/{file_name}_{algorithm}_{threshold}_Report.pdf'
 
     return pdf_path, csv_path
 
-# main('./data/wine-clustering.csv', 0.5, 'both', 'yes')
+main('./data/wine-clustering.csv', 0.5, 'both', 'yes')
