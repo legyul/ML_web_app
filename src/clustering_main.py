@@ -1,12 +1,12 @@
-from clustering import Path, filter_data, elbow, elbow_plot, silhouetteAnalyze, choose_cluster, choose_algo, visualize_pca, plot_cluster, pd, plt
-import common
+from src.clustering import Path, filter_data, elbow, elbow_plot, silhouetteAnalyze, choose_cluster, choose_algo, visualize_pca, plot_cluster, pd, plt
+import src.common as common
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, HRFlowable, Table, TableStyle
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 
 
-def main(file_key, threshold, algorithm, plot):
+def cluster(file_key, threshold, algorithm, plot):
 
     # Call the file and save it to a variable, df
     df, mode = common.load_file(file_key)
@@ -170,4 +170,4 @@ def main(file_key, threshold, algorithm, plot):
 
     return pdf_path, csv_path
 
-main('./data/wine-clustering.csv', 0.5, 'both', 'yes')
+#main('./data/wine-clustering.csv', 0.5, 'both', 'yes')

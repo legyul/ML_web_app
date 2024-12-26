@@ -3,19 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Upload File for Classification</title>
-    <style>
-        body {
-            text-align: center; /* Center align the content */
-        }
-        h1 {
-            margin-top: 50px; /* Add some space from the top */
-        }
-        form {
-            margin-top: 20px; /* Add some space between the title and the form */
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+    <!--
     <h1>Upload your File for Classification</h1>
     <form action="/upload/clustering" method="post" enctype="multipart/form-data">
         <label for="file">Upload your file:</label>
@@ -23,5 +14,8 @@
         <br>
         <button type="submit">Upload</button>
     </form>
+-->
+    <h1>This feature is currently under development and will be available soon.</h1>
+    {% include 'footer.html' %}
 </body>
 </html>

@@ -15,6 +15,14 @@ from pyspark.sql import functions as F
 
 load_dotenv()
 spark = SparkSession.builder.appName("DataPreprocessing").getOrCreate()
+# spark = SparkSession.builder \
+#     .appName("DataProcessing") \
+#     .config("spark.driver.bindAddress", "0.0.0.0") \
+#     .getOrCreate()
+# spark = SparkSession.builder \
+#     .appName("DataPreprocessing") \
+#     .config("spark.ui.port", "4042") \
+#     .getOrCreate()
 
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
