@@ -1,15 +1,20 @@
 import pandas as pd
 import numpy as np
 import math
-from collections import defaultdict
-import statistics
+from collections import defaultdict, Counter
 import re
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.model_selection import train_test_split, KFold
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, make_scorer
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, mean_squared_error, r2_score
 from sklearn.utils import resample
 from sklearn.model_selection import RandomizedSearchCV
+from joblib import Parallel, delayed
+import gc
+from scipy.stats import uniform
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
 
 class preprocess:
     def column_types(data):
@@ -21,12 +26,102 @@ class preprocess:
     def numeric_column_statistics(data, numeric_columns):
         for col in numeric_columns:
             print(f"- {col}: mean = {data[col].mean():.2f}, min = {data[col].min()}, max = {data[col].max()}")
+    
+    def is_language_column(column_data):
+        '''
+        Detects if a column primarily contains text or natural language
 
-    def find_label(data, categorical_columns):
-        counts = data[categorical_columns].value_counts()
-        label = [item[0] for item in counts[counts > 1].index.tolist()]
+        Parameters
+        - column_data (Series): one column of the dataset
 
-        return label
+        Return
+        - bool: True if the column is likely a language based column, else False
+        '''
+        column = column_data.astype(str)
+        if column.dtype != 'object':
+            text_data = column.str.len() > 5
+            return text_data.sum() / len(column) > 0.5
+        return False
+        
+    def is_continuous_data(X, y):
+        '''
+        Automatically determines if the data is continuous
+
+        Parameters
+        - X (numpy array or DataFrame): Input feature
+        - y (Series or DataFrame): Target class
+
+        Returns
+        - bool: True if the dataset can be used with a regression model, False if classification is needed
+        '''
+        if isinstance(y, pd.DataFrame):
+            y = y.iloc[:, 0]
+
+        # Check if the target (y) is continuous
+        unique_values = y.nunique()
+        if unique_values <= 1:
+            print("[DEBUG] Target is not continuous (only one unique value).")
+            return False        # Target variable is constanct, regression is not applicable
+        
+        if y.dtype not in ['float64', 'int64']:
+            print("[DEBUG] Target varibale is not numeric, classification model needed.")
+            return False        # Target is not numeric, cannot use regression
+        
+        print("[DEBUG] Regression model is applicable.")  
+        return True
+
+    def detect_id_columns(data):
+        '''
+        Automatically detect ID columns based on high cardinality (unique values)
+        and column names indicating potential ID columns (e.g., "id", "user", "code", "customer").
+
+        Parameters:
+        - data (DataFrame): The input DataFrame to analyze.
+
+        Returns:
+        - list: A list of column names identified as ID columns.
+        '''
+        id_columns = []
+
+        for col in data.columns:
+            if data[col].dtype == 'object':
+                if data[col].str.len().mean() > 100:
+                    continue
+
+            # Check if the column is numeric
+            if data[col].dtype in ['int64', 'float64']:
+                # Check if it has many unique values (likely to be an ID column)
+                if data[col].nunique() > len(data) * 0.8:  # If unique values > 80% of the dataset length
+                    id_columns.append(col)
+
+            # For object type columns, we can check if they have unique values
+            elif data[col].dtype == 'object' and data[col].nunique() > len(data) * 0.8:
+                if not data[col].str.contains(r'http|www|#|@').any():
+                    id_columns.append(col)
+
+        return id_columns
+
+    def detect_language_data(data, target_column=None):
+        '''
+        Determines if a dataset is primarily a language dataset, excluding the target column
+
+        Parameters
+        - data: pandas DataFrame
+        - target_column: Name of the target column (if known, else None)
+
+        Returns
+        - is_language_data: True if the dataset is primarily language based
+        - language_columns: List of columns identified as language based
+        '''
+        # Exclude target column if provided
+        data_to_check = data.drop(columns=[target_column], errors='ignore')
+
+        # Check each column for language based characteristics
+        language_columns = [col for col in data_to_check.columns if preprocess.is_language_column(data_to_check[col])]
+
+        # Determine if most of the dataset is language based
+        is_language_data = len(language_columns) > 0 and len(language_columns) / len(data_to_check.columns) > 0.6
+        return is_language_data, language_columns
     
     def find_target_column(data):
         '''
@@ -41,18 +136,56 @@ class preprocess:
         # Column name analysis
         target_keywords = ['target', 'label', 'class', 'output', 'result', 'y']
         for col in data.columns:
-            if any(keyword in col.lower() for keyword in target_keywords):
-                print(f"Target column identified by name: {col}")
+            if col.lower() in target_keywords:
+                print(f"[DEBUG] Target column identified by name: {col}")
                 return col
         
-        # Data type analysis
+        # Check for categorical columns and return it
+        numeric_columns, categorical_columns = preprocess.column_types(data)
+        
+        if categorical_columns:
+            print(f"[DEBUG] Target column identified as categorical: {categorical_columns}")
+            return categorical_columns
+
+        # Check for categorical-like columns
+        categori_candidate = []
         for col in data.columns:
-            if data[col].dtype == 'object' or data[col].nunique() < 10:     # Categorical column
-                print(f"Target column identified by data type or unique values: {col}")
-                return col
+            unique_values = data[col].nunique()
+            total_values = len(data[col])
+
+            if unique_values < total_values * 0.05:
+                categori_candidate.append(col)
         
-        # Fall back
-        print("No clear target column found. Please specify manually.")
+        # If there is only one categorical candidate, assume it as target
+        if len(categori_candidate) == 1:
+            print(f"[DEBUG] Target column identified by low cardinality: {categori_candidate[0]}")
+            return categori_candidate[0]
+        
+        # Check for columns with imbalanced class distributions
+        for col in data.columns:
+            if data[col].dtype == 'object' or data[col].nunique() < 10:
+                value_counts = data[col].value_counts(normalize=True)
+                
+                if value_counts.max() > 0.5:
+                    print(f"[DEBUG] Target column identified by imbalanced distribution: {col}")
+                    return col
+        
+        # Check for text-based target columns (sentiment or other categories)
+        for col in data.columns:
+            # If the column contains string labels like "Positive", "Neutral", "Negative", etc.
+            value_counts = data[col].value_counts(normalize=True)
+            if any(val in ['Positive', 'Neutral', 'Negative', 'Extremely Positive', 'Extremely Negative'] for val in value_counts.index):
+                print(f"[DEBUG] Target column identified as sentiment or categorical: {col}")
+                return col
+                
+        # Use is_language_column function to detect text_based target columns
+        text_candidates = [col for col in data.columns if preprocess.is_language_column(data[col])]
+
+        if len(text_candidates) == 1:
+            print(f"[DEBUG] Target column identified as text-based: {text_candidates[0]}")
+            return text_candidates[0]
+
+        print("[ERROR] No clear target column found.")
         return None
     
     def map_target(target_column):
@@ -66,13 +199,15 @@ class preprocess:
         mapped_target: List of integer_mapped target values
         label_mapping: Dictionary mapping original labels to integers
         '''
+        # If target_column is a list or numpy array, convert to pandas Series for consistent processing
+        if isinstance(target_column, (list, np.ndarray)):
+            target_column = pd.Series(target_column)
+        
+        # If it's a DataFrame with more than one column, raise an error
         if isinstance(target_column, pd.DataFrame):
             if target_column.shape[1] > 1:
-                raise ValueError("Target column must be a single column, but multiple columns were provided.")
+                raise ValueError("[ERROR] Target column must be a single column, but multiple columns were provided.")
             target_column = target_column.iloc[:, 0]
-
-        # Convert to pandas Series for consistent processing
-        target_column = pd.Series(target_column)
 
         # Check if the target column is numeric
         if pd.api.types.is_numeric_dtype(target_column):
@@ -83,7 +218,7 @@ class preprocess:
         label_mapping = {label: idx for idx, label in enumerate(unique_labels)}
 
         # Map the target column to integers
-        mapped_target = target_column.map(label_mapping).tolist()
+        mapped_target = target_column.map(label_mapping)
 
         return mapped_target, label_mapping
 
@@ -99,47 +234,157 @@ class preprocess:
         - List of original labels
         '''
         if label_mapping is None:
-            raise ValueError("Reverse mapping is required to map back to original labels.")
+            raise ValueError("[ERROR] Reverse mapping is required to map back to original labels.")
         
         label_mapping = {v: k for k, v in label_mapping.items()}
         
         original_labels = [label_mapping[value] for value in mapped]
         return original_labels
+    
+    ## Need to be fix to work with Language dataset
+    def preprocess_language_columns(data):
+        '''
+        Detect language data and preprocess the detected columns using LM_preprocess and TF-IDF
 
+        Parameters
+        - data (DataFrame): Input dataset
+
+        Returns
+        - processed_data (DataFrame): DataFrame with language columns preprocessed and vertorized
+        - target_column (str): Target column name
+        - language_columns (list): List of language columns names
+        - bow_vocab (list): Vocabulary generated by the Bag of Words process
+        '''
+        data.dropna(how='any')
+
+        # Automatically detect ID columns and exclude them
+        id_columns = preprocess.detect_id_columns(data)
+        print(f"[INFO] Detected ID columns: {id_columns}")
+
+        # Find the target columns
+        target_column = preprocess.find_target_column(data)
+        print(f"[INFO] Target column detected: {target_column}")
+
+        # Detect language columns
+        is_language_data, language_columns = preprocess.detect_language_data(data, target_column=target_column)
+
+        if not is_language_data:
+            print("[INFO] No language data detected.")
+            return data, target_column, None, []
+        
+        print(f"[INFO] Detected language columns: {language_columns}")
+
+        # Exclude ID columns and target column from the language columns
+        language_columns = [col for col in language_columns if col not in id_columns and col != target_column]
+
+        # If language_columns is empty after filtering, print a message
+        if not language_columns:
+            print("[WARNING] No valid language columns remaining after filering ID and target columns.")
+
+        # Apply language model preprocessing to each detected column using joblib for parallel processing
+        def parallel_preprocess(column):
+            return column.fillna('').apply(LLM_models.LM_preprocess)
+        
+        # Process each language column in batches to reduce memory usage
+        bow_vocab = set()
+        batch_size = 200
+
+        gc.collect()
+
+        # Replace the original language columns with parallel preprocess data
+        for col in language_columns:
+            print(f"[INFO] Preprocessing language column: {col}")
+
+            processed_column = data[col].apply(str)
+
+            # Apply the preprocessing in parallel across batches
+            processed_column = Parallel(n_jobs=2)(
+                delayed(parallel_preprocess)(data[col][i : i + batch_size])
+                for i in range(0, len(data[col]), batch_size)
+            )
+
+            gc.collect()
+
+            processed_column = [item for sublist in processed_column for item in sublist]
+
+            # Apply TF-IDF vectorization in parallel
+            tfidf_matrix, vocab = LLM_models.vectorize_and_compute_tfidf(processed_column, batch_size=batch_size, n_jobs=3)
+
+            # Replace the column with its TF-IDF vectors
+            data[col] = list(tfidf_matrix)
+
+            # Combine vocabularies
+            bow_vocab.update(vocab)
+
+            gc.collect()
+
+        print(f"[INFO] Preprocessing complete. Vocabulary size: {len(bow_vocab)}")
+
+        return data, target_column, language_columns, bow_vocab
+
+    
 # ============================================== Numeric ===========================================================
-# Models for the numeric dataset
+# Models (Naive Bayes, Decision Tree, Random Forest, Logistic Regression) for the numeric dataset
 class numeric:
     # ------------------------------------------ Naive Bayes ---------------------------------------------------
     # Gausian Naive Bayes model
-    class gausian_naive_bayes:
+    class gausian_NaiveBayes:
         def __init__(self):
-            self.class_stats = defaultdict(lambda: defaultdict(list))
+            '''
+            Initialize the Gaussian Navie Bayes model
+
+            Attributes
+            - class_stats (dict): Stores the mean and standard deviation of each feature for each class
+            - class_freq (dict): Stores the frequency of each class in the training data
+            - classes (set): Unique set of classes in the dataset
+            '''
+            self.class_stats = defaultdict(dict)
             self.class_freq = defaultdict(int)
             self.classes = set()
+            self.num_class = 2
         
         def fit(self, X, y):
+            '''
+            Train the model by calculating mean and standard deviation for each feature of each class
+
+            Parameters
+            - X (numpy array or DataFrame): Feature matrix of shape (num_samples, num_features)
+            - y (numpy array or Series): Target labels of shape (num_samples)
+            '''
             if isinstance(X, pd.DataFrame):
-                X = X.values.tolist()
+                X = X.values
             if isinstance(y, pd.Series):
-                y = y.tolist()
+                y = y.values
     
             self.classes = set(y)
-
-            # Classificate the data by class
-            for label, features in zip(y, X):
-                self.class_freq[label] += 1
-                for i, value in enumerate(features):
-                    self.class_stats[label][f'feature{i+1}_values'].append(value)
+            classes, counts = np.unique(y, return_counts=True)
+            self.num_class = len(classes)
             
             # Calculate the mean and standard deviation of each class
             for label in self.classes:
-                for i in range(len(X[0])):
-                    values = self.class_stats[label][f'feature{i+1}_values']
-                    self.class_stats[label][f'feature{i+1}_mean'] = statistics.mean(values)
-                    self.class_stats[label][f'feature{i+1}_std'] = statistics.stdev(values) if len(values) > 1 else 1e-9
+                # Filter rows belonging to the current class
+                X_class = X[y == label]
+                self.class_freq[label] = len(X_class)
+                
+                # Clacluate mean and std for each feature in the current class
+                for i in range(X.shape[1]):
+                    self.class_stats[label][f'feature{i+1}_mean'] = np.mean(X_class[:, i])
+                    std = np.std(X_class[:, i])
+                    self.class_stats[label][f'feature{i+1}_std'] = std if std > 1e-9 else 1e-9
         
         def pdf(self, x, mean, std):
-            if std == 0:
+            '''
+            Calculate the probability density function (PDF) value for a given data point
+
+            Parameters
+            - x (float): The value to evaluate
+            - mean (float): Mean of the distribution
+            - std (float): Standard deviation of the distribution
+
+            Returns
+            - float: Probability density value for the given x
+            '''
+            if std == 0:        # Handle zero standard deviation
                 return 1.0 if x == mean else 0.0
             
             coefficient = 1 / math.sqrt(2 * math.pi) * std
@@ -147,306 +392,612 @@ class numeric:
             
             return coefficient * exponent
 
-        def predict(self, X):
-            prediction = []
+        def predict_proba(self, X):
+            '''
+            Predict the probabilities of each class for the given input data
+
+            Parameters
+            - X (numpy array or DataFrame): Feature matrix of shape (num_samples, num_features)
+
+            Returns:
+            - numpy array: Predicted probabilities for each class, shape (num_samples, num_classes)
+            '''
+            if isinstance(X, pd.DataFrame):
+                X = X.values
+
+            probabilities = []
             total_samples = sum(self.class_freq.values())
 
-            if isinstance(X, pd.DataFrame):
-                X = X.values.tolist()
             
             for features in X:
                 score = {}
                 for label in self.classes:
+                    # Calculate log prior probability
                     score[label] = math.log(self.class_freq[label] / total_samples)
                 
-                for i, feature in enumerate(features):
-                    mean = self.class_stats[label][f'feature{i+1}_mean']
-                    std = self.class_stats[label][f'feature{i+1}_std']
-                    score[label] += math.log(self.pdf(feature, mean, std) + 1e-9)
-            
-                probability = {label: math.exp(score[label]) for label in score}
+                    # Add log likelihood for each feature
+                    for i, feature in enumerate(features):
+                        mean = self.class_stats[label][f'feature{i+1}_mean']
+                        std = self.class_stats[label][f'feature{i+1}_std']
+                        score[label] += math.log(self.pdf(feature, mean, std) + 1e-9)
+                
+                # Convert log scores to probabilities
+                max_score = max(score.values())
+                probability = {label: math.exp(score[label] - max_score) for label in score}
                 total_probability = sum(probability.values())
-                percentage = {label: (prob / total_probability) * 100 for label, prob in probability.items()}
+                probabilities.append([probability[label] / total_probability for label in self.classes])
 
-                predicted_label = max(percentage, key=percentage.get)
-                prediction.append(predicted_label)
+            probabilities = np.array(probabilities)
+
+            return probabilities
         
-            return prediction
-    
+        def predict(self, X):
+            '''
+            Predict the class labels for the given input data
+
+            Parameters
+            - X (numpy array or DataFrame): Feature matrix of shape (num_samples, num_features)
+
+            Returns
+            - list: Predicted class labels of shape (num_samples)
+            '''
+            probabilities = self.predict_proba(X)       # Get probabilities for each class
+
+            # Choose the class with the highest probability
+            predicted_indices = np.argmax(probabilities, axis=1)
+            class_list = list(self.classes)
+            predictions = [class_list[idx] for idx in predicted_indices]
+
+            return predictions
+        
+                
     # ------------------------------------------ Decision Tree ---------------------------------------------------
     
-    class decision_tree:
-        def __init__(self, feature=None, threshold=None, left=None, right=None, value=None, mode='classification'):
+    class DecisionTree:
+        def __init__(self, feature=None, threshold=None, left=None, right=None, value=None, mode='classification', num_class=None):
+            '''
+            DecisionTree class for classification and regression
+
+            Parameters
+            - feature (str): The feature used for splitting at this node
+            - threshold (float): The threshold value for splitting the data
+            - left (DecisionTree): The left subtree
+            - right (DecisionTree): The right subtree
+            - value (float or int): Value of the prediction at a leaf node
+            - mode (str): Mode of the tree, either 'classification' or 'regression' (defalut = 'classification')
+            '''
             self.feature = feature
             self.threshold = threshold
             self.left = left
             self.right = right
             self.value = value
             self.mode = mode
+            self.root = None
+            self.num_class = num_class
+            
+        def entropy(self, y):
+            '''
+            Calculate the entropy for a set of target values
 
-        def entropy(y):
+            Parameters
+            - y (Series): Target values
+
+            Returns
+            - float: Entropy value
+            '''
             classes, counts = np.unique(y, return_counts=True)
             probability = counts / len(y)
-            entropy = -np.sum(probability * np.log2(probability))
+            entropy = -np.sum(probability * np.log2(probability + 1e-9))    # Added small constant to avoid log(0)
             
             return entropy
 
-        def gini_index(y):
+        def gini_index(self, y):
+            '''
+            Calculate the Gini index for a set of target values
+
+            Parameters
+            - y (Series): Target values
+
+            Returns
+            - float: Gini index value
+            '''
             classes, counts = np.unique(y, return_counts=True)
+            #self.num_class = len(classes)
             probability = counts / len(y)
             gini_index = 1 - np.sum(probability ** 2)
 
             return gini_index
-
-        def indi_best_split(feature, target):
-            '''
-            Find the best split for a single feature in classification
-
-            Parameters
-            - feature: 1D array of feature values
-            - y: Array-like target values
-
-            Returns
-            - best_split: The threshold value for the best split
-            - best_gain: Information Gain due to the split
-            '''
-            unique_values = np.unique(feature)
-            best_gain = -1
-            best_split = None
-
-            parent_entropy = numeric.decision_tree.entropy(target)
-
-            for split in unique_values:
-                left_mask = feature <= split
-                right_mask = feature > split
-
-                left_entropy = numeric.decision_tree.entropy(target[left_mask])
-                right_entropy = numeric.decision_tree.entropy(target[right_mask])
-
-                weighted_entropy = (len(target[left_mask]) / len(target)) * left_entropy + \
-                                    (len(target[right_mask]) / len(target)) * right_entropy
-                
-                info_gain = parent_entropy - weighted_entropy
-
-                if info_gain > best_gain:
-                    best_gain = info_gain
-                    best_split = split
-                
-            return best_split, best_gain
-        
-        def indi_best_split_regression(feature, y):
-            '''
-            Find the best split for a single feature in regression
-
-            Parameters
-            - feature: 1D array of feature values
-            - y: Array-like target values
-
-            Returns
-            - best_split: The threshold value for the best split
-            - best_gain: Reduction in MSE due to the split
-            '''
-            sorted_indices = np.argsort(feature)
-            feature = feature[sorted_indices]
-            y = y[sorted_indices]
-
-            best_split = None
-            best_gain = -float('inf')
-            total_variance = np.var(y) * len(y)     # Total variance before split
-
-            for i in range(1, len(y)):
-                left_y = y[:i]
-                right_y = y[i:]
-
-                if len(left_y) == 0 or len(right_y) == 0:
-                    continue
-
-                # Calculate variance for each split
-                left_var = np.var(left_y) * len(left_y)
-                right_var = np.var(right_y) * len(right_y)
-                mse_reduction = total_variance - (left_var + right_var)
-
-                # Update best split
-                if mse_reduction > best_gain:
-                    best_gain = mse_reduction
-                    best_split = (feature[i-1] + feature[i]) / 2
-            
-            return best_split, best_gain
-
-        def all_best_split(X, y, mode='classification'):
-            '''
-            Find the best split across all features.
-
-            Parameters
-            - X: DataFrame containing features
-            - y: Array-like target values
-            - mode: 'classification' or 'regression'
-
-            Returns
-            - best_feature: The feature providing the best split
-            - best_split_value: The threshold value for the best split
-            - best_gain: The gain (IG for classification, MSE reduction for regression)
-            '''
-            best_feature = None
-            best_split_value = None
-            best_gain = -float('inf')
-
-            for col in X.columns:
-                if mode == 'regression':
-                    split, gain = numeric.decision_tree.indi_best_split_regression(X[col].values, y)
-                else:
-                #print(f"\nChecking feature: {col}")
-                    split, gain = numeric.decision_tree.indi_best_split(X[col].values, y)
-                #print(f"- Split Value: {split}, Information Gain: {gain:.4f}")
-            
-            if gain > best_gain:
-                best_gain = gain
-                best_split_value = split
-                best_feature = col
-            
-            return best_feature, best_split_value, best_gain
         
         @staticmethod
-        def build_tree(X, y, depth=0, mode='classification'):
+        def _parallel_fit_subtree(tree, X, y, depth, min_gain, n_jobs):
             '''
-            Train Decision tree model.
-            X: 2D array or DataFrame containing the characteristics of each sample
-            y: List of corresponding labels (class)
-            mode: 'classification' or 'regression'
-            '''
-            # Condition of stopping processing
-            if len(np.unique(y)) == 1:  # If there is same label
-                if mode == 'regression':
-                    return numeric.decision_tree(value=np.mean(y))  # Return mean value
-                else:
-                    return numeric.decision_tree(value=np.unique(y)[0])
-            
-            min_samples = max(10, int(0.05 * len(y)))
-            if len(y) < min_samples:    # If less than minimum samples, then stop processing
-                if mode == 'regression':
-                    return numeric.decision_tree(value=np.mean(y))
-                else:
-                    values, counts = np.unique(y, return_counts=True)
-                    return numeric.decision_tree(value=values[np.argmax(counts)])
-            
-            # Find best split
-            best_feature, best_threshold, best_gain = numeric.decision_tree.all_best_split(X, y, mode=mode)
+            Helper function to fit a subtree in parallel
 
-            if best_gain == 0:
-                if mode == 'regression':
-                    return numeric.decision_tree(value=np.mean(y))
-                else:
-                    values, counts = np.unique(y, return_counts=True)
-                    return numeric.decision_tree(value=values[np.argmax(counts)])
+            Parameters:
+            - tree (DecisionTree): Subtree to fit
+            - X (DataFrame): Input features
+            - y (Series): Target labels
+            - depth (int): Current depth
+            - min_gain (float): Minimum gain threshold
+            - n_jobs (int): Number of jobs for parallel processing
+
+            Returns:
+            - DecisionTree: Trained subtree
+            '''
+            tree.fit(X, y, depth, min_gain, n_jobs)
+            return tree
+        
+        def fit(self, X, y, depth=0, min_gain=0.01, n_jobs=-1):
+            '''
+            Build the decision tree recursively
+
+            Parameters
+            - X (numpy array or DataFrame): Input features
+            - y (Series): Target values
+            - depth (int): Current depth of the tree (default = 0)
+            - min_gain (folat): Minimum information gain required to split a node (default = 0.01)
+            - n_jobs (int): Number of jobs for parallel processing (default = -1)
+            ''' 
+            unique_classes = np.unique(y)
             
-            # Split the dataset
+            if self.num_class is None:
+             self.num_class = len(unique_classes)
+
+            # Stopping condition: All labels are the same
+            if len(unique_classes) == 1:
+                self.value = y.iloc[0] if isinstance(y, pd.Series) else y[0]
+                print(f"[DEBUG] Stopping at leaf: class={self.value}, num_class={self.num_class}")
+                return
+            
+            # Stopping condition: Not enough samples
+            min_samples = max(10, int(0.05 * len(y)))
+            if len(y) < min_samples:
+                self.value = y.mode()[0] if self.mode == 'classification' else y.mean()
+                return
+            
+            # Find the best split
+            best_feature, best_threshold, best_gain = self._find_best_split(X, y)
+            if best_gain < min_gain:
+                self.value = y.mode()[0] if self.mode == 'classification' else y.mean()
+                print(f"[DEBUG] Stopping due to low gain: value={self.value}, num_class={self.num_class}")
+                return
+            
+            # Perform the split
             left_mask = X[best_feature] <= best_threshold
             right_mask = X[best_feature] > best_threshold
 
-            left_subtree = numeric.decision_tree.build_tree(X[left_mask], y[left_mask], depth + 1, mode=mode)
-            right_subtree = numeric.decision_tree.build_tree(X[right_mask], y[right_mask], depth + 1, mode=mode)
+            if left_mask.sum() == 0 or right_mask.sum() == 0:
+                # Handle case where one split is empty
+                self.value = y.mode()[0] if self.mode == 'classification' else y.mean()
+                print(f"[DEBUG] Stopping due to empty split: value={self.value}, num_class={self.num_class}")
+                return
 
-            return numeric.decision_tree(feature=best_feature, threshold=best_threshold, left=left_subtree, right=right_subtree)
+            # Create left and right subtrees
+            self.feature = best_feature
+            self.threshold = best_threshold
+            self.left = numeric.DecisionTree(mode=self.mode, num_class=self.num_class)
+            self.right = numeric.DecisionTree(mode=self.mode, num_class=self.num_class)
+
+            results = Parallel(n_jobs=n_jobs)(
+                delayed(self._parallel_fit_subtree)(tree, X[mask], y[mask], depth + 1, min_gain, n_jobs)
+                for tree, mask in [(self.left, left_mask), (self.right, right_mask)]
+            )
+
+            self.left, self.right = results
+
+            print(f"[DEBUG] Tree built at depth {depth} with feature={self.feature} and threshold={self.threshold}")
+
+        def _find_best_split(self, X, y):
+            '''
+            Find the best feature and threshold to split the data
+
+            Parameters
+            - X (DataFrame): Input features
+            - y (Series): Target values
+
+            Returns
+            - best_feature (str): The feature providing the best split
+            - best_threshold (float): The threshold value for the best split
+            - best_gain (float): The information gain for the best split
+            '''
+            best_gain = -float('inf')
+            best_feature = None
+            best_threshold = None
+
+            # Parent node entropy
+            parent_entropy = self.entropy(y)
+
+            # Iterate over all features
+            for feature in X.columns:
+                unique_values = np.unique(X[feature])
+                for value in unique_values:
+                    left_mask = X[feature] <= value
+                    right_mask = X[feature] > value
+
+                    left_entropy = self.entropy(y[left_mask])
+                    right_entropy = self.entropy(y[right_mask])
+
+                    # Calculate weighted entropy
+                    weighted_entropy = ((len(y[left_mask]) / len(y)) * left_entropy + (len(y[right_mask]) / len(y)) * right_entropy)
+
+                    # Calculate information gain
+                    gain = parent_entropy - weighted_entropy
+
+                    # Update the best split if gain is higher
+                    if gain > best_gain:
+                        best_gain = gain
+                        best_feature = feature
+                        best_threshold = value
+            
+            return best_feature, best_threshold, best_gain
         
         def predict(self, X):
             '''
-            Predict the class labels for the given documents.
-            X: 2D array or DataFrame containing the characteristics of each sample
+            Predict the output for the given input data.
+
+            Parameters
+            - X (numpy array or DataFrame): Input feature
+
+            Returns
+            - list: Predicted values for all samples
+            - float/int: Predicted value
             '''
-            # When aproach to leaf node
+            predictions = []
+            for _, row in X.iterrows():
+                predictions.append(self._predict_single(row))
+            
+            return predictions
+
+        def _predict_single(self, row):
+            '''
+            Helper function to predict a single sample
+
+            Parameters
+            - row (Series or 1D array): Single sample
+
+            Returns
+            - float or int: Predicted value
+            '''
+            # If reach a leaf node, return the node value
             if self.value is not None:
                 return self.value
             
-            if self.mode == 'regression':
-                if X[self.feature] <= self.threshold:
-                    return self.left.predict(X)
-                else:
-                    return self.right.predict(X)
+            if row[self.feature] <= self.threshold:
+                return self.left._predict_single(row)
             else:
-                if X[self.feature] <= self.threshold:
-                    return self.left.predict(X)
-                else:
-                    return self.right.predict(X)
+                return self.right._predict_single(row)
+
+        def predict_proba(self, X, num_class=None):
+            '''
+            Predict the class probabilities for the given input data
+
+            Parameters
+            - X (numpy array or DataFarme): Input feature
+
+            Returns
+            - list: Predicted probabilities for all samples
+            - numpy array: Predicted distribution over classes for classification, or predicted value for regression
+            '''
+            prob_results = []
+
+            for _, row in X.iterrows():
+                prob_results.append(self._predict_proba_single(row))
+            
+            return prob_results
+
+        def _predict_proba_single(self, row):
+            '''
+            Helper function to predict probabilities for a single sample
+
+            Parameters
+            - row (Series or 1D array): Single sample
+
+            Returns
+            - numpy array: Predicted probability distribution
+            - list: Predicted probability distribution or value
+            '''
+            # If reach a leaf node, return the probability distribution
+            if self.value is not None:
+                print(f"[DEBUG] Leaf Node: value={self.value}, num_class={self.num_class}")
+                
+                if not (0 <= int(self.value) < self.num_class):
+                    raise ValueError(f"[ERROR] Invalid class value: {self.value}. Expected range: 0 to {self.num_class}")
+                # Return probability distribution
+                prob = np.zeros(self.num_class)
+                prob[int(self.value)] = 1.0
+                return prob
+
+            if self.feature is None or self.threshold is None:
+                raise ValueError("[ERROR] Reached an intermidate node with no valid splits. Tree may not be properly trained.")
+
+            if row[self.feature] <= self.threshold:
+                return self.left._predict_proba_single(row)
+            else:
+                return self.right._predict_proba_single(row)
+        
+        def print_tree(self, node=None, depth=0):
+            '''
+            Recursively print the tree structure for debugging purposes.
+            '''
+            if node is None:
+                node = self
+            
+            # Print the current node
+            print(f"{'|   ' * depth}Node: feature={node.feature}, threshold={node.threshold}, value={node.value}, mode={node.mode}")
+
+            # Recursively print the left and right subtrees
+            if node.left is not None:
+                print(f"{'|   ' * depth}Left:")
+                self.print_tree(node.left, depth + 1)
+            
+            if node.right is not None:
+                print(f"{'|  ' * depth}Right:")
+                self.print_tree(node.right, depth + 1)
     
     # ------------------------------------------ Random Forest ---------------------------------------------------
     class RandomForest:
-        def __init__(self, n_trees=None, max_depth=None, min_samples_split=2, mode='classification'):
+        
+        def __init__(self, n_trees=None, max_depth=25, min_samples_split=2, mode='classification', random_state=None):
+            '''
+            Initialize the RandomForest model
+
+            Parameters
+            - n_trees (int): Number of trees in the forest (default = None, will be optimized)
+            - max_depth (int): Maximum depth of each tree (default = 40, will be optimized)
+            - min_samples_split (int): Minimum samples required to split a node (default = 2)
+            - mode (str): Either 'classification' or 'regression'
+            '''
             self.n_trees = n_trees
             self.max_depth = max_depth
             self.min_samples_split = min_samples_split
             self.mode = mode
             self.trees = []
-        
-        @staticmethod
-        def optimize_n_trees_depth(X, y):
+            self.num_class = 2
+            self.random_state = random_state
+
+        def _train_and_evaluate(self, n_trees, max_depth, X_train, y_train, X_val, y_val):
+            '''
+            Train and evaluate a RandomForest model for given parameters.
+
+            Parameters:
+            - n_trees (int): Number of trees in the forest
+            - max_depth (int): Maximum depth of each tree
+            - X_train (DataFrame): Training input features
+            - y_train (Series): Training target labels
+            - X_val (DataFrame): Validation input features
+            - y_val (Series): Validation target labels
+
+            Returns:
+            - float: Evaluation score (accuracy for classification, R² for regression)
+            '''
+            forest = numeric.RandomForest(n_trees=n_trees, max_depth=max_depth, mode=self.mode)
+            forest.fit(X_train, y_train)
+            predictions = forest.predict(X_val)
+
+            if self.mode == 'classification':
+                return accuracy_score(y_val, predictions)
+            else:
+                return np.corrcoef(y_val, predictions)[0, 1] ** 2
+            
+        def optimize_n_trees_depth(self, X, y, n_jobs=-1, random_state=42):
             '''
             Use a validation set to explore the optimal number of trees and max depth
+
+            Parameters
+            - X (numpy array or DataFrame): Input feature
+            - y (Series): Target labels
+            - n_jobs (int): Number of jobs for parallel processing (default = -1 for all processors)
+            - random_state (int): Random seed (default = 42)
+
+            Returns
+            - best_n_trees (int): The optimal number of trees
+            - best_max_depth (int): The optimal max depth
             '''
-            X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+            X = X.reset_index(drop=True)
+            y = y.reset_index(drop=True)
 
-            best_n_trees = 10
-            best_max_depth = 3
-            best_accuracy = 0
+            X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=random_state)
 
-            for n_trees in range(10, 101, 10):
-                for max_depth in range(3, 21, 2):
-                    forest = numeric.RandomForest(n_trees=n_trees, max_depth=max_depth)
-                    forest.fit(X_train, y_train)
-                    predictions = forest.predict(X_val)
-                    accuracy = accuracy_score(y_val, predictions)
+            best_n_trees = None
+            best_max_depth = None
+            best_score = -float('inf')
 
-                    print(f"Trees: {n_trees}, Max Depth: {max_depth}, Accuracy: {accuracy}")
+            def train_and_evaluate(n_trees, max_depth):
+                try:
+                    self.n_trees = n_trees
+                    self.max_depth = 25
+                    self.trees = []
 
-                    if accuracy > best_accuracy:
-                        best_accuracy = accuracy
-                        best_n_trees = n_trees
-                        best_max_depth = max_depth
+                    for _ in range(self.n_trees):
+                        tree = numeric.DecisionTree(mode=self.mode, num_class=self.num_class)
+                        tree.fit(X_train, y_train)
+                        self.trees.append(tree)
+                    
+                    predictions = self.predict(X_val)
+
+                    if self.mode == 'classification':
+                        score = accuracy_score(y_val, predictions)
+                    else:
+                        score = np.corrcoef(y_val, predictions)[0, 1] ** 2
+                
+                    return score, n_trees, max_depth
+                except Exception as e:
+                    print(f"[ERROR] Error in train_and_evaluate with n_trees={n_trees} and max_depth={max_depth}: {e}")
+                    return None, n_trees, max_depth
+                
+            # Parallel execution for different combinations of n_trees and max_depth
+            results = Parallel(n_jobs=n_jobs)(
+                delayed(train_and_evaluate)(n_trees, max_depth)
+                for n_trees in range(10, 101, 10)
+                for max_depth in range(3, 21, 2)
+            )
+            results = [result for result in results if result[0] is not None]
+
+            if not results:
+                print("[ERROR] No valid results from the train and evaluate process.")
+                return None, None
+
+            for score, n_trees, max_depth in results:
+                if score> best_score:
+                    best_score = score
+                    best_n_trees = n_trees
+                    best_max_depth = max_depth
             
-            print(f"Optimal number of trees: {best_n_trees}, Optimal max depth: {best_max_depth}, Best Accuracy: {best_accuracy}")
-
+            print(f"Optimal number of trees: {best_n_trees}, Optimal max depth: {best_max_depth}, Best Accuracy: {best_score}")
             return best_n_trees, best_max_depth
         
-        def fit(self, X, y):
-            if self.n_trees is None or self.max_depth is None:
-                self.n_trees, self.max_depth = self.optimize_n_trees_depth(X, y)
+        def fit(self, X, y, n_jobs=-1):
+            '''
+            Train the RandomForest model by fitting multiple decision trees
+            If optimize_hyperparameters=True, it will automatically find the best n_trees and max_depth
+
+            Parameters
+            - X (numpy array or DataFrame): Input feature
+            - y (Series): Target labels
+            - n_jobs (int): Number of jobs for parallel processing (default=-1 for all processors)
+            - random_state (int): Random seed (default = 42)
+            '''
+            if isinstance(X, pd.DataFrame):
+                # If already a DataFrame, return as is
+                X = X
+            elif isinstance(X, np.ndarray):
+                # If numpy array, convert to DataFrame
+                X = pd.DataFrame(X)
+            elif isinstance(X, list):
+                # If list, convert to DataFrame
+                X = pd.DataFrame(X)
             
-            self.trees = []
+            classes, counts = np.unique(y, return_counts=True)
+            self.num_class = len(classes)
 
-            # Bootstrap smapling
-            for _ in range(self.n_trees):
-                X_sample, y_sample = resample(X, y)
-                if isinstance(X_sample, pd.DataFrame):
-                    feature_indices = np.random.choice(range(X.shape[1]), size=int(np.sqrt(X.shape[1])), replace=False)
-                    X_sample = X_sample.iloc[:, feature_indices]
-                else:
-                    feature_indices = np.random.choice(range(X.shape[1]), size=int(np.sqrt(X.shape[1])), replace=False)
-                    X_sample = X_sample[:, feature_indices]
+            np.random.seed(self.random_state)
+            
+            best_n_trees, best_max_depth = self.optimize_n_trees_depth(X, y, n_jobs=n_jobs)
 
-                tree = numeric.decision_tree()
-                tree = tree.build_tree(X_sample, y_sample, depth=0)
-                self.trees.append((tree, feature_indices))
-        
+            self.n_trees = best_n_trees
+            self.max_depth = best_max_depth
+            
+            self.trees = Parallel(n_jobs=n_jobs)(
+                delayed(self._train_tree)(X, y, 42, i) for i in range(self.n_trees)
+            )
+
+            print(f"[INFO] Training compled. {len(self.trees)} trees trained and {self.num_class}.")
+
+        def _train_tree(self, X, y, random_state, tree_idx):
+            '''
+            Train a single Decision Tree for the RandomForest.
+
+            Parameters:
+            - X (DataFrame or numpy array): Input features
+            - y (Series or numpy array): Target labels
+            - random_state (int): Random seed
+            - tree_idx (int): Index of the tree being trained (used for randomization)
+            
+            Returns:
+            - tree: The trained DecisionTree
+            '''
+            tree = numeric.DecisionTree(mode=self.mode, num_class=self.num_class)
+            tree.fit(X, y)
+            return tree
+
         def predict(self, X):
-            predictions = []
+            '''
+            Predict the target values for the given input features using the trained RandomForest
 
-            for _, row in X.iterrows():
-                tree_preds = []
-                for tree, feature_indices in self.trees:
-                    sample_features = row.iloc[feature_indices]
-                    tree_preds.append(tree.predict(sample_features))
-                print(f"tree_preds: {tree_preds}")
-                if self.mode == 'regression':
-                    mean_pred = np.mean(tree_preds)
-                    rounded_pred = round(mean_pred)
-                    predictions.append(np.mean(tree_preds))
-                else:
-                    predictions.append(max(set(tree_preds), key=tree_preds.count))
+            Parameters
+            - X (numpy array or DataFrame): Input feature
             
-            return predictions
-    
+            Returns
+            - predictions (list): Predicted values for each sample
+            '''
+            if not self.trees:
+                raise ValueError("The RandomForest has not been trained. Call 'fit' first.")
+            
+            print("[INFO] Making predictions...")
+            if isinstance(X, np.ndarray):
+                X = pd.DataFrame(X)
+
+            predictions = [tree.predict(X) for tree in self.trees]
+
+            if self.mode == 'classification':
+                return np.array([Counter(pred).most_common(1)[0][0] for pred in zip(*predictions)])
+            else:
+                return np.mean(predictions, axis=0)
+            
+        def predict_proba(self, X):
+            '''
+            Predict the class probabilities for the given input features using the trained RandomForest
+
+            Parameters
+            - X (numpy array or DataFrame): Input features
+
+            Returns
+            - numpy array: Probability distribution over classes for each sample in classification or predicted value for regression
+            '''
+            if not self.trees:
+                raise ValueError("The RandomForest has not been trained. Call 'fit' first.")
+            
+            print("[INFO] Predicting probabilities...")
+            
+            probabilities = [tree.predict_proba(X, self.num_class) for tree in self.trees]
+            return np.mean(probabilities, axis=0)
+            
+        def check_trees(self):
+            '''
+            Check the status of all trees in the forest for debugging purposes
+            '''
+            for i, (tree, feature_indices) in enumerate(self.trees):
+                if tree is None:
+                    print(f"[ERROR] Tree {i} is None!")
+                else:
+                    print(f"[DEBUG] Tree {i}: {tree}, Feature Indices: {feature_indices}")
+        
+        def get_params(self, deep=True):
+            '''
+            Return the parameters of the model for RandomizedSearchCV or GridSearchCV.
+
+            Parameters:
+            - deep (bool): Whether to return parameters of sub-estimators (default is True)
+            
+            Returns:
+            - params (dict): Dictionary of model parameters
+            '''
+            params = {
+                'n_trees': self.n_trees,
+                'max_depth': self.max_depth,
+                'min_samples_split': self.min_samples_split,
+                'mode': self.mode,
+                'random_state': self.random_state
+            }
+
+            if deep:
+                params.update({'tree_params': {
+                    'max_depth': self.max_depth,
+                    'min_samples_split': self.min_samples_split,
+                }})
+            
+            return params
+        
+        def set_params(self, **params):
+            '''
+            Set parameters for the model.
+
+            Parameters:
+            - **params (dict): Dictionary of parameters to set
+            '''
+            for param, value in params.items():
+                if param in self.__dict__:
+                    setattr(self, param, value)
+                elif param == 'tree_params' and 'tree_params' in params:
+                    tree_params = params['tree_params']
+                    for tree in self.trees:
+                        tree.set_params(**tree_params)
+            return self
+
+
     # ---------------------------------------- Logistic Regression -------------------------------------------------
     class LogisticRegression:
-        def __init__(self, learning_rate=0.001, max_epochs=1000, L2=0.01):
+        def __init__(self, learning_rate=0.001, max_epochs=1000, L2=0.01, num_class=2):
             '''
             Initialize the logistic regression model with parameters
 
@@ -457,7 +1008,7 @@ class numeric:
             self.learning_rate = learning_rate
             self.max_epochs = max_epochs
             self.L2 = L2
-            self.num_class = 2
+            self.num_class = num_class
             self.w = None
             self.b = None
 
@@ -480,7 +1031,7 @@ class numeric:
             Softmax activation function
 
             Parameters
-            - x (numpy array): Input array where each row represents a set of raw class scores (logits)
+            - z (numpy array): Input array where each row represents a set of raw class scores (logits)
                 for each sample in the dataset
 
             Returns
@@ -508,14 +1059,14 @@ class numeric:
             '''
             epsilon = 1e-15
 
-            num_samples, self.num_class = pred_probs.shape
-            y_one_hot = np.zeros((num_samples, self.num_class))
+            #num_samples, self.num_class = pred_probs.shape
+            y_one_hot = np.zeros((len(y), self.num_class))
 
             # Ensure y values are valid indices
             if np.max(y) >= self.num_class:
                 raise ValueError(f"Invalid class label in y. Max class index({np.max(y)}) exceeds num_class ({self.num_class}).")
 
-            y_one_hot[np.arange(num_samples), y] = 1
+            y_one_hot[np.arange(len(y)), y] = 1
             
             # Compute cross-entropy loss
             clipped_probs = np.clip(pred_probs, epsilon, 1 - epsilon)
@@ -575,7 +1126,7 @@ class numeric:
             # Early stopping initialization
             best_val_loss = float('inf')                    # Set the initial best validation loss to infinity 
             epochs_wout_improvement = 0                     # Counter for patience
-            best_w, best_b = self.w, self.b                 # Best weights and bias to restore after early stopping
+            best_w, best_b = self.w.copy(), self.b.copy()                 # Best weights and bias to restore after early stopping
 
             # Training loop over epochs
             for epoch in range(self.max_epochs):
@@ -710,7 +1261,8 @@ class numeric:
                 setattr(self, param, value)
             
             return self
-
+    
+    
 # ========================================= Language ==============================================================
 # Models for the language dataset
 class LLM_models:
@@ -728,22 +1280,131 @@ class LLM_models:
     
     # Bag of words function
     def bow(data):
-        # Extract all words as a set
-        vocabulary = set()
+        '''
+        Efficient Bag of Words implementation using NumPy
 
-        for doc in data:
-            words = doc.split() # Split the word with the space
-            vocabulary.update(words)    # Add the word to the vocabulary
+        Parameters
+        - data (list of str): List of text documents
 
-        # Create a word frequency vector for each document
-        freq_vector = []
-        for doc in data:
+        Returns
+        - numpy array: Frequency matrix where rows are documents and columns are word frequencies.
+        - list: Vocabulary list containing all unique words.
+        '''
+        # Build Vocabulary
+        print("[INFO] Building vocabulary...")
+        vocabulary = sorted(set(word for doc in data for word in doc.split()))  # Flatten and sort
+        word_to_idx = {word: idx for idx, word in enumerate(vocabulary)}        # Word to index mapping
+        print(f"[INFO] Vocabulary size: {len(vocabulary)}")
+
+        # Initialize Frequency Matrix
+        print(f"[INFO] Creating frequency matrix...")
+        freq_matrix = np.ones((len(data), len(vocabulary)), dtype=int)      # Add-1 smoothing
+
+        # Populate Frequency Matrix
+        for doc_idx, doc in enumerate(data):
             words = doc.split()
-            doc_vector = [words.count(word) for word in vocabulary]
-            freq_vector.append(doc_vector)
+            for word in words:
+                if word in word_to_idx:
+                    freq_matrix[doc_idx, word_to_idx[word]] += 1
 
-        return np.array(freq_vector), list(vocabulary)
+        return freq_matrix, vocabulary
     
+    def pad_matrix(matrix, vocab):
+        '''
+        Pad the matrix to make sure each vector has the same size based on the global vocabulary
+
+        Parameters:
+        - matrix: The current batch matrix
+        - vocab: The global covabulary to match
+
+        Returns:
+        - padded_vec: The matrix with padded columns to match the global vocab size
+        '''
+        vocab_size = len(vocab)
+        padded_matrix = np.zeros((matrix.shape[0], vocab_size))
+
+        word_to_idx = {word: idx for idx, word in enumerate(vocab)}
+
+        for i, row in enumerate(matrix):
+            for j, word in enumerate(row):
+                if word in word_to_idx:
+                    padded_matrix[i, word_to_idx[word]] = row[j]
+
+        return padded_matrix
+
+    def calculate_tfidf(bow_matrix):
+        '''
+        Compute TF-IDF scores from the Bag of Words matrix
+
+        Parameters
+        - bow_matrix (numpy array): Bag of Words matrix
+
+        Returns
+        - tfidf_matrix (numpy array): TF-IDF transformed matrix
+        '''
+        # TF
+        tf = bow_matrix / np.sum(bow_matrix, axis=1, keepdims=True)
+
+        # IDF
+        doc_count = np.sum(bow_matrix > 0, axis=0)
+        idf = np.log((bow_matrix.shape[0] + 1) / (doc_count + 1)) + 1       # Add-1 smoothing
+
+        # TF-IDF
+        tfidf_matrix = tf * idf
+        return tfidf_matrix
+
+    def vectorize_and_compute_tfidf(processed_column, batch_size=200, n_jobs=2):
+            '''
+            Compute BoW and TF-IDF in batches for a given column with parallel processing
+
+            Parameters
+            - data (list of str): Preprocessed text data for a single column
+            - batch_size (int): Number of documents to process in a single batch
+            - n_jobs (int): Number of parallel jobs for joblib (default = 2)
+
+            Returns
+            - tfidf_matrix (numpy array): TF-IDF transformed matrix
+            - vocab (list): Vocabulary list generated from the column
+            '''
+            def compute_batch_tfidf(batch):
+                # Generate BoW matrix for the batch
+                bow_matrix, vocab = LLM_models.bow(batch)
+
+                # Compute TF-IDF for the batch
+                tfidf_matrix = LLM_models.calculate_tfidf(bow_matrix)
+
+                return tfidf_matrix, vocab
+            
+            # Split data into batches
+            num_batches = len(processed_column) // batch_size + (1 if len(processed_column) % batch_size != 0 else 0)
+            batches = [processed_column[i * batch_size : (i + 1) * batch_size] for i in range(num_batches)]
+
+            # Process batches in parallel
+            results = Parallel(n_jobs=n_jobs)(
+                delayed(compute_batch_tfidf)(batch) for batch in batches
+            )
+
+            # Combine results
+            tfidf_matrices = [result[0] for result in results]
+            vocabularies = [result[1] for result in results]
+
+            # Merge vocabularies while maintaining order
+            vocab = []
+            for vocabulary in vocabularies:
+                vocab.extend(vocabulary)
+            
+            # Remove duplicates while preserving order
+            vocab = list(dict.fromkeys(vocab))
+
+            # Now ensure each tfidf_matrix is consistent in size
+            fixed_tfidf_matrices = [LLM_models.pad_matrix(tfidf_matrix, vocab) for tfidf_matrix in tfidf_matrices]
+
+            # Stack the matrices together
+            tfidf_matrix = np.vstack(fixed_tfidf_matrices)
+
+            gc.collect()
+            return tfidf_matrix, vocab
+
     class NaiveBayes:
         def __init__(self):
             self.class_counts = {}
@@ -765,14 +1426,6 @@ class LLM_models:
                 self.class_counts[label] += 1
                 for word, count in vector.items():
                     self.word_counts[label][word] += count
-            # self.total_documents = len(x)
-            # for doc, label in zip(x, y):
-            #     if label not in self.word_counts:
-            #         self.word_counts[label] = []
-            #     self.class_counts[label] = self.class_counts.get(label, 0) + 1
-            #     for word in doc.split():
-            #         self.word_counts[(word, label)] = self.word_counts.get((word, label), 0) + 1
-            #         self.vocabulary.add(word)
         
         def predict(self, X):
             '''
@@ -808,91 +1461,259 @@ class LLM_models:
                 all_predicted_labels.append(predicted_label)
             
             return all_predicted_labels
-            # all_predicted_labels = []
-            # all_probabilities = []
-        
-            # for x in X:
-            #     scores = {}
-            #     for label in self.class_counts.keys():
-            #         score = math.log(self.class_counts[label] / self.total_documents)
-            #         for word in x.split():
-            #             count = self.word_counts.get((word, label), 0) + 1
-            #             score += math.log(count / (self.class_counts[label] + len(self.vocabulary)))
-            #         scores[label] = score
-        
-            #     # Calculate the probability of each label
-            #     probability = {label: math.exp(scores[label]) for label in scores}
-
-            #     # Convert to probability to percentage
-            #     total_probability = sum(probability.values())
-            #     percentage = {label: (prob / total_probability) * 100 for label, prob in probability.items()}
-        
-            #     # Find highest probability of each label
-            #     predicted_label = max(percentage, key=percentage.get)
-            #     all_predicted_labels.append(predicted_label)
-            #     all_probabilities.append(percentage)
-        
-            # return all_predicted_labels, all_probabilities
+            
 
 # ============================================= Tuning ===========================================================
 class tuning:
-    def tuen_hyperparameters(model, param_dist, train_X, train_y, test_X, test_y, n_iter=100, cv=5, scoring=None, random_state=42):
+    
+    def tune_hyperparameters(model, param_dist, X, y, n_iter=100, cv=5, random_state=42, n_jobs=-1):
         '''
         Optimize the hyperparameters of a given model using RandomizedSearchCV and evaluate its performance
 
         Parameters
-        - model: The model to optimize (LogisticRegression, RandomForestClassifier, etc)
+        - model: The model to optimize (LogisticRegression)
         - param_dist (dictionary): The search space for hyperparameters
-        - train_X (features): Training data
-        - train_y (labels): Training data
-        - test_X (features): Test data
-        - test_y (labels): Test data
+        - X (numpy array or DataFrame): Input features
+        - y (numpy array or Series): Input labels
         - n_iter: Number of hyperparameter combination to try
         - cv: Number of cross-validation folds
-        - scoring: Performance evaluation metrics (default is None, but multiple metrics can be used)
         - random_state: Random seed (default is 42)
+        - n_jobs: Number of jobs for parallel processing (default = -1 for all processors)
 
         Returns:
         - Best hyperparameters, model performance metrics
         '''   
-        # Using RandomizedSearchCV to optimize hyperparameters
-        random_search = RandomizedSearchCV(estimator=model,
-                                        param_distributions=param_dist,
-                                        n_iter=n_iter,
-                                        cv=cv,
-                                        scoring=scoring,
-                                        n_jobs=-1,
-                                        random_state=random_state,
-                                        refit='accuracy')    # Choose the best model based on 'accurary'
+        try:
+            y, label_map = preprocess.map_target(y)
+            num_class = len(np.unique(y))
+            if hasattr(model, 'num_class'):
+                model.num_class = num_class
+
+            train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=random_state)
+
+            # Using RandomizedSearchCV to optimize hyperparameters
+            random_search = RandomizedSearchCV(estimator=model,
+                                            param_distributions=param_dist,
+                                            n_iter=n_iter,
+                                            cv=cv,
+                                            scoring='accuracy',
+                                            n_jobs=n_jobs,
+                                            random_state=random_state,
+                                            refit=True)    # Choose the best model based on 'accurary'
+            
+
+            # Fit the model
+            random_search.fit(train_X, train_y)
+
+            # Output the best hyperparameters
+            best_params = random_search.best_params_
+            print(f"Best parameters: {best_params}")
+
+            # Predict using the best model
+            best_model = random_search.best_estimator_
+            test_predictions = best_model.predict(test_X)
+
+            # Evaluate metrics
+            performance_metrics = {}
+            accuracy = accuracy_score(test_y, test_predictions)
+            f1 = f1_score(test_y, test_predictions, average='weighted')
+
+
+            if hasattr(best_model, 'predict_proba') and callable(getattr(best_model, 'predict_proba')):
+                test_probabilities = best_model.predict_proba(test_X)
+                if test_probabilities.ndim == 1:
+                    test_probabilities = test_probabilities.reshape(-1, 1)
+                roc_auc = roc_auc_score(test_y, test_probabilities, multi_class='ovr', average='weighted')
+            else:
+                roc_auc = None       # No predict_proba available
+
+            performance_metrics['Accuracy'] = accuracy
+            performance_metrics['F1 Score'] = f1
+            performance_metrics['ROC AUC'] = roc_auc
+
+            print(f"Accuracy: {accuracy: .4f}")
+            print(f"F1 Score (Weighted): {f1: .4f}")
+            print(f"ROC AUC: {roc_auc: .4f}" if roc_auc is not None else "[INFO] ROC AUC not available.")
+
+            print("[INFO] Hyperparameter tuning complete.")
+            print(f"Best Model: {random_search.best_estimator_}")
+
+            return best_params, performance_metrics, best_model
+    
+        except Exception as e:
+            print(f"[ERROR] Error during hyperparameter tuning: {e}")
+            return None, None, None
+    
+    
+# ============================================== Select Model ================================================
+# Select the best model class
+class select_model:
+    # k-Fold Cross-Validation function
+    def cross_validation(model_class, X, y, k=5, mode='classification', n_jobs=-1):
+        '''
+        Perform k-fold cross-validation for a given model and dataset with ROC-AUC curve score for classification,
+        R^2 score for regression using joblib
+
+        Parameters
+        - model: Classification models (eg, Naive Bayes, Decision Tree, Random Forest, Logistic Regression, etc.)
+        - X (numpy array or DataFrame): Feature matrix of shape (num_samples, num_features)
+        - y (numpy array or Series): Target labels of shape (num_samples)
+        - k (int): Number of folds for cross-validation (default = 5)
+        - mode (str): 'classification' or 'regression' (default = 'classification')
+        - n_jobs (int): Number of jobs for parallel processing (default = -1)
+
+        Returns
+        - float: The average score across all folds
+        '''
+        try:
+            # Initialize k-fold cross-validation splitter
+            kf = KFold(n_splits=k, shuffle=True, random_state=42)
+            print(f"Current model (cross_validation_joblib): {model_class}")
+
+            def train_and_evaluate(train_idx, val_idx):
+                # Split the data
+                if isinstance(X, pd.DataFrame):
+                    train_X, val_X = X.iloc[train_idx], X.iloc[val_idx]
+                else:
+                    train_X, val_X = X[train_idx], X[val_idx]
+                
+                if isinstance(y, pd.Series):
+                    train_y, val_y = y.iloc[train_idx], y.iloc[val_idx]
+                else:
+                    train_y, val_y = y[train_idx], y[val_idx]
+
+                # Initialize the model
+                if isinstance(model_class, type):  # If it's a class
+                    model = model_class()
+                else:  # If it's already an instance
+                    model = model_class
+                
+                model.fit(train_X, train_y)
+
+                if mode == 'regression':
+                    predictions = model.predict(val_X)
+                    return r2_score(val_y, predictions)
+                elif mode == 'classification':
+                    prob_y = model.predict_proba(val_X)
+            
+                    if hasattr(model, "num_class") and model.num_class == 2:
+                        return roc_auc_score(val_y, prob_y[:, 1])
+                    else:
+                        return roc_auc_score(val_y, prob_y, multi_class='ovr', average='weighted')
+            
+            scores = Parallel(n_jobs=n_jobs)(
+                delayed(train_and_evaluate)(train_idx, val_idx)
+                for train_idx, val_idx in kf.split(X)
+            )
+            
+            avg_score = np.mean([score for score in scores if score is not None])        # Filter out failed folds
+
+            print(f"[DEBUG] Cross-validation results for all folds: {scores}")
+
+            return avg_score
+        except Exception as e:
+            print(f"[ERROR] Error during cross-validation with joblib: {e}")
+            return None
+
+    # Model selection function
+    def model_selection(models, X, y, k=5):
+        '''
+        Seleect the best model for the given dataset using k-fold cross-validation and Dask for parallel computation
+
+        Parameters
+        - models (dict): Dictionary of models to be used
+        - X (numpy array or DataFrame): Feature matrix of shape (num_samples, num_features)
+        - y (numpy array or Series): Target labels of shape (num_samples)
+        - k (int): Number of folds for cross-validation (default=5)
+
+        Returns
+        - tuple
+            - best_model: The model with the best performance based on the ROC-AUC curve
+            - best_score (float): The average score of the best model across all folds
+        '''
+        try:
+            if preprocess.is_continuous_data(X, y):
+                mode = 'regression'
+            else:
+                mode = 'classification'
+
+            y, label_map = preprocess.map_target(y)
+            
+            # Run all tasks in parallel
+            results = []
+            for model_name, model in models.items():
+                # Skip models that do not match the detected mode
+                if ('classification' in model_name and mode == 'regression') or \
+                ('regression' in model_name and mode == 'classification'):
+                    print(f"[INFO] Skipping model: {model_name} (not applicable for mode: {mode})")
+                    continue
+
+                print(f"Processing model: {model_name}")
+
+                if model_name in [
+                    'Decision Tree classification',
+                    'Decision Tree regression',
+                    'Random Forest classification',
+                    'Random Forest regression',
+                    'Tuned Logistic Regression'
+                    ]:
+
+                    if model_name == 'Tuned Logistic Regression':
+                        print(f"[INFO] Applying scaler to Tuned Logistic Regression.")
+                        scaler = StandardScaler()
+                        X_scaled = scaler.fit_transform(X)
+
+                        train_X, test_X, train_y, test_y = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+                        model.fit(train_X, train_y)
+                    
+                    else:
+                        train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
+                        print(f"Model Selection: {type(train_X)}")
+                        model.fit(train_X, train_y)
+                        print(f"Model Selection after fit: {type(train_X)}")
+
+                    if mode == 'classification':
+                        prob_y = model.predict_proba(test_X)
+                        if model.num_class == 2:
+                            score = roc_auc_score(test_y, prob_y)
+                        else:
+                            score = roc_auc_score(test_y, prob_y, multi_class='ovr', average='weighted')
+                    else:
+                        print(f"Model Selection predict: {type(test_X)}")
+                        predictions = model.predict(test_X)
+                        score = r2_score(test_y, predictions)
+                    
+                    print(f"[DEBUG] {model_name} evaluation score: {score}")
+                    results.append((model_name, model, score))
+                
+                else:
+                    # Perform cross-validation fro other models
+                    print(f"Scheduling cross-validation fro model: {model_name}")
+                    score = select_model.cross_validation(model, X, y, k, mode=mode)
+                    results.append((model_name, model, score))
+                    print(f"[DEBUG] {model_name} cross-validation score: {score}")
+            
+            print("Results: ", results)
+
+            # Find the best model based on score
+            used_model_name = []
+            best_model = None
+            best_score = -float('inf')
+            best_model_name = None
+            for model_name, model, score in results:
+                used_model_name.append(model_name)
+                if score is not None and score > best_score:
+                    best_score = score
+                    best_model = model
+                    best_model_name = model_name
+            
+            print(f"Best Model: {best_model}, Best Score: {best_score: .4f}")
+            
+            return best_model_name, used_model_name, best_model, best_score, label_map
         
-        # Fit the model
-        random_search.fit(train_X, train_y)
-
-        # Output the best hyperparameters
-        best_params = random_search.best_params_
-        print(f"Best parameters: {best_params}")
-
-        # Predict using the best model
-        y_pred = random_search.best_estimator_.predict(test_X)
-        y_pred_proba = random_search.best_estimator_.predict_proba(test_X)
-
-        if y_pred_proba.ndim == 1:
-            y_pred_proba = y_pred_proba.reshape(-1, 1)
-
-        test_y = np.array(test_y)
-
-        # Evaluate using different metrics
-        accuracy = accuracy_score(test_y, y_pred)
-        f1 = f1_score(test_y, y_pred, average='weighted')
-        roc_auc = roc_auc_score(test_y, y_pred_proba, multi_class='ovr')
-
-        print(f"Best Parameters: {best_params}")
-        print(f"Accuracy: {accuracy}")
-        print(f"F1 Score (Weighted): {f1}")
-        print(f"ROC AUC: {roc_auc}")
-        print(f"Best Model: {random_search.best_estimator_}")
-
-        return best_params, accuracy, f1, roc_auc, random_search.best_estimator_
+        except Exception as e:
+            print(f"[ERROR] Error during model selection {model_name}: {e}")
+            return None, None, None, None, None
 
 
 # ============================================== Evaluation ================================================
@@ -947,7 +1768,6 @@ class evaluation:
             specificity_sum += specificity
             f1_score_sum += f1_score
 
-        
         num_classes = len(metrics)
         macro_precision = precision_sum / num_classes
         macro_sensitivity = sensitivity_sum / num_classes
@@ -967,3 +1787,17 @@ class evaluation:
         micro_f1_score = 0 if (micro_precision + micro_sensitivity) == 0 else 2 * micro_precision * micro_sensitivity / (micro_precision + micro_sensitivity)
 
         return micro_precision, micro_sensitivity, micro_specificity, micro_f1_score
+
+class BestModel:
+    def __init__(self, model, label_mapping=None):
+        self.model = model
+        self.label_mapping = label_mapping
+    
+    def fit(self, X, y):
+        y, label_mapping = preprocess.map_target(y)
+        self.label_mapping = label_mapping
+        self.model.fit(X, y)
+    
+    def predict(self, X):
+        predictions = self.model.predict(X)
+        return preprocess.reverse_map(predictions, self.label_mapping)
