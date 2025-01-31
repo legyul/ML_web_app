@@ -5,6 +5,7 @@ from sklearn.impute import SimpleImputer
 import re
 from dotenv import load_dotenv
 import os
+import logging
 import boto3
 from botocore.exceptions import ClientError
 from pyspark.sql import SparkSession
@@ -13,16 +14,9 @@ from pyspark.ml.feature import Imputer, StringIndexer, StandardScaler as sparkSt
 from pyspark.sql.types import DoubleType, FloatType, IntegerType, LongType, StringType
 from pyspark.sql import functions as F
 
+
 load_dotenv()
 spark = SparkSession.builder.appName("DataPreprocessing").getOrCreate()
-# spark = SparkSession.builder \
-#     .appName("DataProcessing") \
-#     .config("spark.driver.bindAddress", "0.0.0.0") \
-#     .getOrCreate()
-# spark = SparkSession.builder \
-#     .appName("DataPreprocessing") \
-#     .config("spark.ui.port", "4042") \
-#     .getOrCreate()
 
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
@@ -34,10 +28,46 @@ s3 = boto3.client(
     aws_secret_access_key=AWS_SECRET_ACCESS_KEY
 )
 
+current_dataset_filename = None
+
+def set_dataset_filename(filename):
+    global current_dataset_filename
+    current_dataset_filename = filename
+
+
+def setup_global_logger(log_level=logging.DEBUG):
+    '''
+    Setup a global logger with the specified log file name and level
+
+    Parameters:
+    - log_level (int): Logging level (e.g., DEBUG, INFO)
+
+    Returns
+    - logger: Configured logger
+    '''
+    log_dir = './_logs'
+    os.makedirs(log_dir, exist_ok=True)
+
+    # Create log file path using the dataset filename
+    if current_dataset_filename:
+        log_filename = os.path.join(log_dir, f"{os.path.splitext(current_dataset_filename)[0]}_log.log")
+    else:
+        log_filename = os.path.join(log_dir, "default_log.log")
+
+    logger = logging.getLogger(f'logger_{current_dataset_filename if current_dataset_filename else "default"}')
+    logger.setLevel(log_level)
+
+    # Set up file handler for logging to the file
+    handler = logging.FileHandler(log_filename)
+    handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
+
+    return logger
+
 # Load dataset file
 def load_file(file_key):
     file_name = file_key.split('/')[-1]
-    file_path = f"uploaded/{file_name}"
+    file_path = f"uploads/uploaded/{file_name}"
     
     # Check if the file exists in S3 bucket
     try:
@@ -52,7 +82,7 @@ def load_file(file_key):
     # Download the file to a temporary directory
     temp_file_path = f"/tmp/{file_name}"
     with open(temp_file_path, 'wb') as f:
-        s3.download_fileobj(S3_BUCKET_NAME, f'uploaded/{file_name}', f)
+        s3.download_fileobj(S3_BUCKET_NAME, f'uploads/uploaded/{file_name}', f)
     
     # Determine file extension
     file_extension = file_name.split('.')[-1]

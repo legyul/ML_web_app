@@ -6,16 +6,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <!--
+    
     <h1>Upload your File for Classification</h1>
-    <form action="/upload/clustering" method="post" enctype="multipart/form-data">
+    <form action="/upload" method="post" enctype="multipart/form-data">
         <label for="file">Upload your file:</label>
         <input type="file" name="file" id="file" required>
         <br>
+        <input type="hidden" name="task" value="classification">
+        <br>
         <button type="submit">Upload</button>
     </form>
--->
-    <h1>This feature is currently under development and will be available soon.</h1>
+
     {% include 'footer.html' %}
 </body>
 </html>

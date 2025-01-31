@@ -3,18 +3,20 @@ import numpy as np
 import math
 from collections import defaultdict, Counter
 import re
+from .common import setup_global_logger
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.model_selection import train_test_split, KFold
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, mean_squared_error, r2_score
-from sklearn.utils import resample
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, r2_score
 from sklearn.model_selection import RandomizedSearchCV
 from joblib import Parallel, delayed
 import gc
 from scipy.stats import uniform
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+import time
 
+logger = setup_global_logger()
 
 class preprocess:
     def column_types(data):
@@ -22,6 +24,10 @@ class preprocess:
         categorical_columns = data.select_dtypes(exclude='number').columns.tolist()
         
         return numeric_columns, categorical_columns
+    
+    def check_target_type(y):
+        _, categofical_columns = preprocess.column_types(pd.DataFrame(y))
+        return 'categorical' if len(categofical_columns) > 0 else 'numerical'
 
     def numeric_column_statistics(data, numeric_columns):
         for col in numeric_columns:
@@ -60,14 +66,14 @@ class preprocess:
         # Check if the target (y) is continuous
         unique_values = y.nunique()
         if unique_values <= 1:
-            print("[DEBUG] Target is not continuous (only one unique value).")
+            logger.debug("Target is not continuous (only one unique value).")
             return False        # Target variable is constanct, regression is not applicable
         
         if y.dtype not in ['float64', 'int64']:
-            print("[DEBUG] Target varibale is not numeric, classification model needed.")
+            logger.debug("Target varibale is not numeric, classification model needed.")
             return False        # Target is not numeric, cannot use regression
         
-        print("[DEBUG] Regression model is applicable.")  
+        logger.debug("Regression model is applicable.")  
         return True
 
     def detect_id_columns(data):
@@ -137,14 +143,14 @@ class preprocess:
         target_keywords = ['target', 'label', 'class', 'output', 'result', 'y']
         for col in data.columns:
             if col.lower() in target_keywords:
-                print(f"[DEBUG] Target column identified by name: {col}")
+                logger.debug(f"Target column identified by name: {col}")
                 return col
         
         # Check for categorical columns and return it
         numeric_columns, categorical_columns = preprocess.column_types(data)
         
         if categorical_columns:
-            print(f"[DEBUG] Target column identified as categorical: {categorical_columns}")
+            logger.debug(f"Target column identified as categorical: {categorical_columns}")
             return categorical_columns
 
         # Check for categorical-like columns
@@ -158,7 +164,7 @@ class preprocess:
         
         # If there is only one categorical candidate, assume it as target
         if len(categori_candidate) == 1:
-            print(f"[DEBUG] Target column identified by low cardinality: {categori_candidate[0]}")
+            logger.debug(f"Target column identified by low cardinality: {categori_candidate[0]}")
             return categori_candidate[0]
         
         # Check for columns with imbalanced class distributions
@@ -167,7 +173,7 @@ class preprocess:
                 value_counts = data[col].value_counts(normalize=True)
                 
                 if value_counts.max() > 0.5:
-                    print(f"[DEBUG] Target column identified by imbalanced distribution: {col}")
+                    logger.debug(f"Target column identified by imbalanced distribution: {col}")
                     return col
         
         # Check for text-based target columns (sentiment or other categories)
@@ -175,17 +181,17 @@ class preprocess:
             # If the column contains string labels like "Positive", "Neutral", "Negative", etc.
             value_counts = data[col].value_counts(normalize=True)
             if any(val in ['Positive', 'Neutral', 'Negative', 'Extremely Positive', 'Extremely Negative'] for val in value_counts.index):
-                print(f"[DEBUG] Target column identified as sentiment or categorical: {col}")
+                logger.debug(f"Target column identified as sentiment or categorical: {col}")
                 return col
                 
         # Use is_language_column function to detect text_based target columns
         text_candidates = [col for col in data.columns if preprocess.is_language_column(data[col])]
 
         if len(text_candidates) == 1:
-            print(f"[DEBUG] Target column identified as text-based: {text_candidates[0]}")
+            logger.debug(f"Target column identified as text-based: {text_candidates[0]}")
             return text_candidates[0]
 
-        print("[ERROR] No clear target column found.")
+        logger.error("No clear target column found.")
         return None
     
     def map_target(target_column):
@@ -206,7 +212,9 @@ class preprocess:
         # If it's a DataFrame with more than one column, raise an error
         if isinstance(target_column, pd.DataFrame):
             if target_column.shape[1] > 1:
-                raise ValueError("[ERROR] Target column must be a single column, but multiple columns were provided.")
+                error_message = "Target column must be a single column, but multiple columns were provided."
+                logger.error(error_message)
+                raise ValueError(error_message)
             target_column = target_column.iloc[:, 0]
 
         # Check if the target column is numeric
@@ -234,7 +242,9 @@ class preprocess:
         - List of original labels
         '''
         if label_mapping is None:
-            raise ValueError("[ERROR] Reverse mapping is required to map back to original labels.")
+            error_message = "Reverse mapping is required to map back to original labels."
+            logger.error(error_message)
+            raise ValueError(error_message)
         
         label_mapping = {v: k for k, v in label_mapping.items()}
         
@@ -259,27 +269,27 @@ class preprocess:
 
         # Automatically detect ID columns and exclude them
         id_columns = preprocess.detect_id_columns(data)
-        print(f"[INFO] Detected ID columns: {id_columns}")
+        logger.info(f"Detected ID columns: {id_columns}")
 
         # Find the target columns
         target_column = preprocess.find_target_column(data)
-        print(f"[INFO] Target column detected: {target_column}")
+        logger.info(f"Target column detected: {target_column}")
 
         # Detect language columns
         is_language_data, language_columns = preprocess.detect_language_data(data, target_column=target_column)
 
         if not is_language_data:
-            print("[INFO] No language data detected.")
+            logger.info("No language data detected.")
             return data, target_column, None, []
         
-        print(f"[INFO] Detected language columns: {language_columns}")
+        logger.info(f"Detected language columns: {language_columns}")
 
         # Exclude ID columns and target column from the language columns
         language_columns = [col for col in language_columns if col not in id_columns and col != target_column]
 
         # If language_columns is empty after filtering, print a message
         if not language_columns:
-            print("[WARNING] No valid language columns remaining after filering ID and target columns.")
+            logger.warning("No valid language columns remaining after filering ID and target columns.")
 
         # Apply language model preprocessing to each detected column using joblib for parallel processing
         def parallel_preprocess(column):
@@ -293,7 +303,7 @@ class preprocess:
 
         # Replace the original language columns with parallel preprocess data
         for col in language_columns:
-            print(f"[INFO] Preprocessing language column: {col}")
+            logger.info(f"Preprocessing language column: {col}")
 
             processed_column = data[col].apply(str)
 
@@ -318,7 +328,7 @@ class preprocess:
 
             gc.collect()
 
-        print(f"[INFO] Preprocessing complete. Vocabulary size: {len(bow_vocab)}")
+        logger.info(f"Preprocessing complete. Vocabulary size: {len(bow_vocab)}")
 
         return data, target_column, language_columns, bow_vocab
 
@@ -445,8 +455,9 @@ class numeric:
 
             # Choose the class with the highest probability
             predicted_indices = np.argmax(probabilities, axis=1)
-            class_list = list(self.classes)
+            class_list = sorted(list(self.classes))
             predictions = [class_list[idx] for idx in predicted_indices]
+            predictions = np.array(predictions).astype(int)
 
             return predictions
         
@@ -502,7 +513,6 @@ class numeric:
             - float: Gini index value
             '''
             classes, counts = np.unique(y, return_counts=True)
-            #self.num_class = len(classes)
             probability = counts / len(y)
             gini_index = 1 - np.sum(probability ** 2)
 
@@ -546,7 +556,7 @@ class numeric:
             # Stopping condition: All labels are the same
             if len(unique_classes) == 1:
                 self.value = y.iloc[0] if isinstance(y, pd.Series) else y[0]
-                print(f"[DEBUG] Stopping at leaf: class={self.value}, num_class={self.num_class}")
+                # logger.debug(f"Stopping at leaf: class={self.value}, num_class={self.num_class}")
                 return
             
             # Stopping condition: Not enough samples
@@ -559,7 +569,7 @@ class numeric:
             best_feature, best_threshold, best_gain = self._find_best_split(X, y)
             if best_gain < min_gain:
                 self.value = y.mode()[0] if self.mode == 'classification' else y.mean()
-                print(f"[DEBUG] Stopping due to low gain: value={self.value}, num_class={self.num_class}")
+                # logger.debug(f"Stopping due to low gain: value={self.value}, num_class={self.num_class}")
                 return
             
             # Perform the split
@@ -569,7 +579,7 @@ class numeric:
             if left_mask.sum() == 0 or right_mask.sum() == 0:
                 # Handle case where one split is empty
                 self.value = y.mode()[0] if self.mode == 'classification' else y.mean()
-                print(f"[DEBUG] Stopping due to empty split: value={self.value}, num_class={self.num_class}")
+                # logger.debug(f"Stopping due to empty split: value={self.value}, num_class={self.num_class}")
                 return
 
             # Create left and right subtrees
@@ -585,7 +595,7 @@ class numeric:
 
             self.left, self.right = results
 
-            print(f"[DEBUG] Tree built at depth {depth} with feature={self.feature} and threshold={self.threshold}")
+            # logger.debug(f"Tree built at depth {depth} with feature={self.feature} and threshold={self.threshold}")
 
         def _find_best_split(self, X, y):
             '''
@@ -644,7 +654,8 @@ class numeric:
             '''
             predictions = []
             for _, row in X.iterrows():
-                predictions.append(self._predict_single(row))
+                pred = self._predict_single(row)
+                predictions.append(round(pred))
             
             return predictions
 
@@ -698,7 +709,7 @@ class numeric:
             '''
             # If reach a leaf node, return the probability distribution
             if self.value is not None:
-                print(f"[DEBUG] Leaf Node: value={self.value}, num_class={self.num_class}")
+                # logger.debug(f"Leaf Node: value={self.value}, num_class={self.num_class}")
                 
                 if not (0 <= int(self.value) < self.num_class):
                     raise ValueError(f"[ERROR] Invalid class value: {self.value}. Expected range: 0 to {self.num_class}")
@@ -708,7 +719,9 @@ class numeric:
                 return prob
 
             if self.feature is None or self.threshold is None:
-                raise ValueError("[ERROR] Reached an intermidate node with no valid splits. Tree may not be properly trained.")
+                error_message = "Reached an intermidate node with no valid splits. Tree may not be properly trained."
+                # logger.error(error_message)
+                raise ValueError(error_message )
 
             if row[self.feature] <= self.threshold:
                 return self.left._predict_proba_single(row)
@@ -822,7 +835,7 @@ class numeric:
                 
                     return score, n_trees, max_depth
                 except Exception as e:
-                    print(f"[ERROR] Error in train_and_evaluate with n_trees={n_trees} and max_depth={max_depth}: {e}")
+                    logger.error(f"Error in train_and_evaluate with n_trees={n_trees} and max_depth={max_depth}: {e}")
                     return None, n_trees, max_depth
                 
             # Parallel execution for different combinations of n_trees and max_depth
@@ -834,7 +847,7 @@ class numeric:
             results = [result for result in results if result[0] is not None]
 
             if not results:
-                print("[ERROR] No valid results from the train and evaluate process.")
+                logger.error("No valid results from the train and evaluate process.")
                 return None, None
 
             for score, n_trees, max_depth in results:
@@ -843,7 +856,7 @@ class numeric:
                     best_n_trees = n_trees
                     best_max_depth = max_depth
             
-            print(f"Optimal number of trees: {best_n_trees}, Optimal max depth: {best_max_depth}, Best Accuracy: {best_score}")
+            logger.info(f"Optimal number of trees: {best_n_trees}, Optimal max depth: {best_max_depth}, Best Accuracy: {best_score}")
             return best_n_trees, best_max_depth
         
         def fit(self, X, y, n_jobs=-1):
@@ -859,7 +872,7 @@ class numeric:
             '''
             if isinstance(X, pd.DataFrame):
                 # If already a DataFrame, return as is
-                X = X
+                pass
             elif isinstance(X, np.ndarray):
                 # If numpy array, convert to DataFrame
                 X = pd.DataFrame(X)
@@ -871,17 +884,18 @@ class numeric:
             self.num_class = len(classes)
 
             np.random.seed(self.random_state)
-            
-            best_n_trees, best_max_depth = self.optimize_n_trees_depth(X, y, n_jobs=n_jobs)
 
-            self.n_trees = best_n_trees
-            self.max_depth = best_max_depth
+            if self.n_trees is None or self.max_depth is None:
+                best_n_trees, best_max_depth = self.optimize_n_trees_depth(X, y, n_jobs=n_jobs)
+
+                self.n_trees = best_n_trees
+                self.max_depth = best_max_depth
             
             self.trees = Parallel(n_jobs=n_jobs)(
                 delayed(self._train_tree)(X, y, 42, i) for i in range(self.n_trees)
             )
 
-            print(f"[INFO] Training compled. {len(self.trees)} trees trained and {self.num_class}.")
+            logger.info(f"Training compled. {len(self.trees)} trees trained and {self.num_class}.")
 
         def _train_tree(self, X, y, random_state, tree_idx):
             '''
@@ -911,9 +925,11 @@ class numeric:
             - predictions (list): Predicted values for each sample
             '''
             if not self.trees:
-                raise ValueError("The RandomForest has not been trained. Call 'fit' first.")
+                error_message = "The RandomForest has not been trained. Call 'fit' first."
+                logger.error(error_message)
+                raise ValueError(error_message)
             
-            print("[INFO] Making predictions...")
+            logger.info("Making predictions...")
             if isinstance(X, np.ndarray):
                 X = pd.DataFrame(X)
 
@@ -937,7 +953,10 @@ class numeric:
             if not self.trees:
                 raise ValueError("The RandomForest has not been trained. Call 'fit' first.")
             
-            print("[INFO] Predicting probabilities...")
+            if not isinstance(X, pd.DataFrame):
+                X = pd.DataFrame(X)
+            
+            logger.info("Predicting probabilities...")
             
             probabilities = [tree.predict_proba(X, self.num_class) for tree in self.trees]
             return np.mean(probabilities, axis=0)
@@ -948,9 +967,9 @@ class numeric:
             '''
             for i, (tree, feature_indices) in enumerate(self.trees):
                 if tree is None:
-                    print(f"[ERROR] Tree {i} is None!")
+                    logger.error(f"Tree {i} is None!")
                 else:
-                    print(f"[DEBUG] Tree {i}: {tree}, Feature Indices: {feature_indices}")
+                    logger.debug(f"Tree {i}: {tree}, Feature Indices: {feature_indices}")
         
         def get_params(self, deep=True):
             '''
@@ -1064,7 +1083,9 @@ class numeric:
 
             # Ensure y values are valid indices
             if np.max(y) >= self.num_class:
-                raise ValueError(f"Invalid class label in y. Max class index({np.max(y)}) exceeds num_class ({self.num_class}).")
+                error_message = f"Invalid class label in y. Max class index({np.max(y)}) exceeds num_class ({self.num_class})."
+                logger.error(error_message)
+                raise ValueError(error_message)
 
             y_one_hot[np.arange(len(y)), y] = 1
             
@@ -1182,11 +1203,11 @@ class numeric:
                 
                 # Check patience
                 if epochs_wout_improvement >= patience:
-                    print(f"Early stopping triggered at epoch {epoch} with validation loss: {epoch_val_loss:.4f}")
+                    logger.info(f"Early stopping triggered at epoch {epoch} with validation loss: {epoch_val_loss:.4f}")
                     break       # Stop training if no improvement in 'patience' epochs
 
                 if epoch % 100 == 0:
-                    print(f"Epoch {epoch}, Training loss: {train_losses[-1]:.4f}, Validation loss: {val_losses[-1]:.4f}")
+                    logger.info(f"Epoch {epoch}, Training loss: {train_losses[-1]:.4f}, Validation loss: {val_losses[-1]:.4f}")
             
             return best_w, best_b, train_losses, val_losses
         
@@ -1203,7 +1224,9 @@ class numeric:
             - numpy array: Predicted class labels (1D)
             '''
             if self.w is None or self.b is None:
-                raise ValueError("Model not trained yet. Call fit() before predict.")
+                error_message = "Model not trained yet. Call fit() before predict."
+                logger.error(error_message)
+                raise ValueError(error_message)
             
             # Compute the raw class scores (logits)
             z = np.dot(X, self.w) + self.b
@@ -1291,13 +1314,13 @@ class LLM_models:
         - list: Vocabulary list containing all unique words.
         '''
         # Build Vocabulary
-        print("[INFO] Building vocabulary...")
+        logger.info("Building vocabulary...")
         vocabulary = sorted(set(word for doc in data for word in doc.split()))  # Flatten and sort
         word_to_idx = {word: idx for idx, word in enumerate(vocabulary)}        # Word to index mapping
-        print(f"[INFO] Vocabulary size: {len(vocabulary)}")
+        logger.info(f"Vocabulary size: {len(vocabulary)}")
 
         # Initialize Frequency Matrix
-        print(f"[INFO] Creating frequency matrix...")
+        logger.info(f"Creating frequency matrix...")
         freq_matrix = np.ones((len(data), len(vocabulary)), dtype=int)      # Add-1 smoothing
 
         # Populate Frequency Matrix
@@ -1507,7 +1530,6 @@ class tuning:
 
             # Output the best hyperparameters
             best_params = random_search.best_params_
-            print(f"Best parameters: {best_params}")
 
             # Predict using the best model
             best_model = random_search.best_estimator_
@@ -1531,17 +1553,17 @@ class tuning:
             performance_metrics['F1 Score'] = f1
             performance_metrics['ROC AUC'] = roc_auc
 
-            print(f"Accuracy: {accuracy: .4f}")
-            print(f"F1 Score (Weighted): {f1: .4f}")
-            print(f"ROC AUC: {roc_auc: .4f}" if roc_auc is not None else "[INFO] ROC AUC not available.")
+            logger.info("Scores with tuned hyperparameters: ")
+            logger.info(f"Accuracy: {accuracy: .4f}")
+            logger.info(f"F1 Score (Weighted): {f1: .4f}")
+            logger.info(f"ROC AUC: {roc_auc: .4f}" if roc_auc is not None else "ROC AUC not available.")
 
-            print("[INFO] Hyperparameter tuning complete.")
-            print(f"Best Model: {random_search.best_estimator_}")
+            logger.info("Hyperparameter tuning complete.")
 
             return best_params, performance_metrics, best_model
     
         except Exception as e:
-            print(f"[ERROR] Error during hyperparameter tuning: {e}")
+            logger.error(f"Error during hyperparameter tuning: {e}")
             return None, None, None
     
     
@@ -1568,7 +1590,7 @@ class select_model:
         try:
             # Initialize k-fold cross-validation splitter
             kf = KFold(n_splits=k, shuffle=True, random_state=42)
-            print(f"Current model (cross_validation_joblib): {model_class}")
+            logger.debug(f"Current model (cross_validation_joblib): {model_class}")
 
             def train_and_evaluate(train_idx, val_idx):
                 # Split the data
@@ -1608,11 +1630,11 @@ class select_model:
             
             avg_score = np.mean([score for score in scores if score is not None])        # Filter out failed folds
 
-            print(f"[DEBUG] Cross-validation results for all folds: {scores}")
+            logger.debug(f"Cross-validation results for all folds: {scores}")
 
             return avg_score
         except Exception as e:
-            print(f"[ERROR] Error during cross-validation with joblib: {e}")
+            logger.error(f"Error during cross-validation with joblib: {e}")
             return None
 
     # Model selection function
@@ -1631,13 +1653,19 @@ class select_model:
             - best_model: The model with the best performance based on the ROC-AUC curve
             - best_score (float): The average score of the best model across all folds
         '''
+        logger.info("Starting model selection...")
+        start_time = time.time()
         try:
             if preprocess.is_continuous_data(X, y):
                 mode = 'regression'
             else:
                 mode = 'classification'
 
-            y, label_map = preprocess.map_target(y)
+            y_type = preprocess.check_target_type(y)
+            if y_type == 'categorical':
+                y, label_map = preprocess.map_target(y)
+            else:
+                y, label_map = y, None
             
             # Run all tasks in parallel
             results = []
@@ -1645,10 +1673,11 @@ class select_model:
                 # Skip models that do not match the detected mode
                 if ('classification' in model_name and mode == 'regression') or \
                 ('regression' in model_name and mode == 'classification'):
-                    print(f"[INFO] Skipping model: {model_name} (not applicable for mode: {mode})")
+                    logger.info(f"Skipping model: {model_name} (not applicable for mode: {mode})")
                     continue
 
-                print(f"Processing model: {model_name}")
+                logger.info(f"Processing model: {model_name}")
+                model_start_time = time.time()
 
                 if model_name in [
                     'Decision Tree classification',
@@ -1659,41 +1688,63 @@ class select_model:
                     ]:
 
                     if model_name == 'Tuned Logistic Regression':
-                        print(f"[INFO] Applying scaler to Tuned Logistic Regression.")
+                        logger.info(f"Applying scaler to Tuned Logistic Regression.")
                         scaler = StandardScaler()
                         X_scaled = scaler.fit_transform(X)
 
                         train_X, test_X, train_y, test_y = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+                        train_X = pd.DataFrame(train_X).reset_index(drop=True)
+                        test_X = pd.DataFrame(test_X).reset_index(drop=True)
+                        train_y = train_y.reset_index(drop=True)
+                        test_y = test_y.reset_index(drop=True)
+
                         model.fit(train_X, train_y)
                     
                     else:
                         train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
-                        print(f"Model Selection: {type(train_X)}")
+
+                        train_X = pd.DataFrame(train_X).reset_index(drop=True)
+                        test_X = pd.DataFrame(test_X).reset_index(drop=True)
+                        train_y = train_y.reset_index(drop=True)
+                        test_y = test_y.reset_index(drop=True)
+
                         model.fit(train_X, train_y)
-                        print(f"Model Selection after fit: {type(train_X)}")
 
                     if mode == 'classification':
+                        if isinstance(model, Pipeline):
+                            inner_model = None
+                            for step_name in ['Decision Tree classification', 'Decision Tree regression', 'Random Forest classification', 'Random Forest regression', 'Tuned Logistic Regression']:
+                                if step_name in model.named_steps:
+                                    inner_model = model.named_steps[step_name]
+                                    break
+                        else:
+                            inner_model = model
+
                         prob_y = model.predict_proba(test_X)
-                        if model.num_class == 2:
+                        if hasattr(inner_model, 'num_class') and inner_model.num_class == 2:
                             score = roc_auc_score(test_y, prob_y)
+                            logger.info(f"[{model_name}] Classification ROC-AUC score (binary): {score: .4f}")
                         else:
                             score = roc_auc_score(test_y, prob_y, multi_class='ovr', average='weighted')
+                            logger.info(f"[{model_name}] Classification ROC-AUC score (multi-class): {score: .4f}")
                     else:
-                        print(f"Model Selection predict: {type(test_X)}")
                         predictions = model.predict(test_X)
                         score = r2_score(test_y, predictions)
+                        logger.info(f"[{model_name}] Regression R^2 score: {score: .4f}")
                     
-                    print(f"[DEBUG] {model_name} evaluation score: {score}")
+                    logger.debug(f"{model_name} evaluation score: {score}")
                     results.append((model_name, model, score))
                 
                 else:
                     # Perform cross-validation fro other models
-                    print(f"Scheduling cross-validation fro model: {model_name}")
+                    logger.info(f"Scheduling cross-validation fro model: {model_name}")
                     score = select_model.cross_validation(model, X, y, k, mode=mode)
                     results.append((model_name, model, score))
-                    print(f"[DEBUG] {model_name} cross-validation score: {score}")
-            
-            print("Results: ", results)
+                    logger.debug(f"{model_name} cross-validation score: {score}")
+                
+                model_end_time = time.time() - model_start_time
+                logger.info(f"Model {model_name} execution time: {model_end_time: .2f} seconds")
 
             # Find the best model based on score
             used_model_name = []
@@ -1707,13 +1758,15 @@ class select_model:
                     best_model = model
                     best_model_name = model_name
             
-            print(f"Best Model: {best_model}, Best Score: {best_score: .4f}")
+            total_time = time.time() - start_time
+            logger.info(f"Best Model: {best_model}, Best Score: {best_score: .4f}")
+            logger.info(f"Model selection completed in {total_time: .2f} seconds.")
             
-            return best_model_name, used_model_name, best_model, best_score, label_map
+            return best_model_name, used_model_name, best_model, best_score, label_map, y_type
         
         except Exception as e:
-            print(f"[ERROR] Error during model selection {model_name}: {e}")
-            return None, None, None, None, None
+            logger.error(f"Error during model selection {model_name}: {e}")
+            return None, None, None, None, None, None
 
 
 # ============================================== Evaluation ================================================
@@ -1788,6 +1841,69 @@ class evaluation:
 
         return micro_precision, micro_sensitivity, micro_specificity, micro_f1_score
 
+def build_model_dict(X, y):
+    '''
+    Build the models dictionary to use model_selection
+
+    Parameters
+    - X (DataFrame): Input feature
+    - y (DataFrame or Series): Input labels
+
+    Returns
+    - models (dict): Dictionary of the models
+    '''
+    dt_classification = numeric.DecisionTree(mode='classification')
+    dt_regression = numeric.DecisionTree(mode='regression')
+
+    # Use Pipeline
+    rf_classification_pipeline = Pipeline(steps=[
+        ('scaler', StandardScaler()),
+        ('rf_model', numeric.RandomForest(mode='classification'))
+    ])
+
+    rf_regression_pipeline = Pipeline(steps=[
+        ('scaler', StandardScaler()),
+        ('rf_model', numeric.RandomForest(mode='regression'))
+    ])
+
+    logistic_pipeline = Pipeline(steps=[
+        ('scaler', StandardScaler()),
+        ('logistic_model', numeric.LogisticRegression())
+    ])
+
+    # Logistic Regression hyperparameters tuning
+    logi_model = numeric.LogisticRegression()
+
+    param_dist = {
+                    'L2': uniform(0.01, 10),
+                    'learning_rate': uniform(0.0001, 0.01),
+                    'penalty': ['12'],
+                    'solver': ['lbfgs', 'liblinear']
+                }
+    
+    LR_best_params, metrics, tuned_logistic = tuning.tune_hyperparameters(
+            model=logi_model,
+            param_dist=param_dist,
+            X=X,
+            y=y,
+            n_iter=50,
+            cv=3,
+            random_state=42
+        )
+    
+    models = {
+        'Naive Bayes': numeric.gausian_NaiveBayes(),
+        'Decision Tree classification': dt_classification,
+        'Decision Tree regression': dt_regression,
+        'Random Forest classification': rf_classification_pipeline,
+        'Random Forest regression': rf_regression_pipeline,
+        'Logistic Regression': logistic_pipeline,
+        'Tuned Logistic Regression': tuned_logistic
+    }
+
+    return models, LR_best_params, metrics
+
+
 class BestModel:
     def __init__(self, model, label_mapping=None):
         self.model = model
@@ -1801,3 +1917,83 @@ class BestModel:
     def predict(self, X):
         predictions = self.model.predict(X)
         return preprocess.reverse_map(predictions, self.label_mapping)
+
+def individual_model(model_choice, regression, X, y):
+    '''
+    Train and Evaluate individual model depend on user choice
+
+    Parameters
+    - model_choice (str): User choose model
+    - retression (bool): If true, 'regression', if false, 'classification'
+
+    Returns
+    - model: Trained model
+    - accuracy: Accuracy score
+    - score: R^2 score for regression, ROC-AUC score for classification
+    '''
+    if regression:
+        mode = 'regression'
+    else:
+        mode = 'classification'
+    
+    y_type = preprocess.check_target_type(y)
+    if y_type == 'categorical':
+        y, label_map = preprocess.map_target(y)
+    else:
+        y, label_map = y, None
+    
+    model = None
+
+    train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    if model_choice == 'Naive Bayes':
+        model = numeric.gausian_NaiveBayes()
+    elif model_choice == 'Decision Tree':
+        model = numeric.DecisionTree(mode=mode)
+    elif model_choice == 'Random Forest':
+        model = numeric.RandomForest(mode=mode)
+    elif model_choice == 'Logistic Regression':
+        model = numeric.LogisticRegression()
+    else:
+        error_message = f"Invalid model choice: {model_choice}"
+        logger.error(error_message)
+        raise ValueError(error_message)
+    
+    logger.info(f"Training {model_choice}...")
+
+    start_time = time.time()
+
+    try:
+        model.fit(train_X, train_y)
+    except Exception as e:
+        logger.error(f"Error training {model_choice}: {e}")
+        raise
+
+    training_time = time.time() - start_time
+    logger.info(f"Training {model_choice} completed in {training_time: .2f} seconds.")
+
+    logger.info(f"Evaluating {model_choice}...")
+
+    try:
+        predictions = model.predict(test_X)
+    except Exception as e:
+        logger.error(f"Error predicting with {model_choice}: {e}")
+        raise
+
+    accuracy = accuracy_score(test_y, predictions)
+
+    if mode == 'regression':      # Regression
+        score = r2_score(test_y, predictions)
+        logger.info(f"[{model_choice}] Regression R^2 score: {score: .4f}")
+    else:               # Classification
+        prob_y = model.predict_proba(test_X)
+        if hasattr(model, 'num_class') and model.num_class == 2:
+            score = roc_auc_score(test_y, prob_y)
+            logger.info(f"[{model_choice}] Classification ROC-AUC score (binary): {score: .4f}")
+        else:
+            score = roc_auc_score(test_y, prob_y, multi_class='ovr', average='weighted')
+            logger.info(f"[{model_choice}] Classification ROC-AUC score (multi-class): {score: .4f}")
+    
+    logger.info(f"{model_choice} evaluation completed with accuracy: {accuracy: .4f}, score: {score: .4f}")
+    
+    return model, accuracy, score, y_type, label_map

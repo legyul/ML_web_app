@@ -1,5 +1,6 @@
 body {
     text-align: center; /* Center align the content */
+    padding: auto;
 }
 h1 {
     margin-top: 50px; /* Add some space from the top */
@@ -31,7 +32,7 @@ h1 {
 }
 footer {
     text-align: center;
-    padding: 15px 10px; /* Footer 내부 여백 */
+    padding: 20px; /* Footer 내부 여백 */
     background-color: #4CAF50; /* 버튼 배경색과 동일 */
     color: #fff; /* 텍스트 색상 */
     border-top: 3px solid #3e8e41; /* 상단 경계선 추가 */
@@ -42,14 +43,14 @@ footer {
 }
 
 footer a {
-    color: #fff; /* 링크 텍스트 색상 */
+    color: #0077cc; /* 링크 텍스트 색상 */
     text-decoration: none; /* 밑줄 제거 */
     font-weight: bold;
 }
 
 footer a:hover {
     text-decoration: underline; /* 마우스 오버 시 밑줄 */
-    color: #d4edda; /* 강조 색상 */
+    color: #0055aa; /* 강조 색상 */
 }
 
 form {
@@ -85,4 +86,46 @@ input, select {
 }
 .download-text {
     font-size: 1.2em; /* Increase font size slightly */
+}
+
+.social-links {
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+.social-links a {
+    font-size: 1.1em;
+    color: #0077cc;
+    font-weight: bold;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.social-links ul {
+    list-style-type: none;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.social-links ul li {
+    margin-right: 15px;
+}
+
+.social-links a:hover {
+    color: #0055aa;
+}
+
+.social-links a span {
+    margin-left: 10px;
+}
+
+pre {
+    background-color: #f4f4f4;
+    padding: 10px;
+    border: 1px solid #ddd;
+    overflow-x: auto;
 }

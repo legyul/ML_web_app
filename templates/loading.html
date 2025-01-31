@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Processing Classification...</title>
+        <style>
+            #loading {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 24px;
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="loading">Processing your classification... Please wait.</div>
+
+        <script>
+            const filename = "{{ filename }}";
+            const model_choice = "{{ model_choice }}";
+
+            // Message list
+            const messages = [
+                "Training the best model for your data...\n\nMeanwhile, I'm also training myself for my next AI/ML role! 😃",
+                "Find the Best Model for your dataset...\n\nSpeaking of best fits, I'm currently looking for the right AI/ML opportunity! 😉",
+                "Model optimizing in progress...\n\nSounds like a great time for a coffee break.\nMeanwhile, if you know of any AI/ML roles, let's talk!",
+                "Generating classification report...\n\nI love building AI tools like this! If you're working on something cool in AI/ML and need a team member, let's connect!",
+                "Finalizing and saving results...\n\n - By Nam Gyu Lee"
+            ];
+
+            let messageIndex = 0;
+            let showProgressStatus = false;
+
+            function changeMessage() {
+                if (!showProgressStatus) {
+                    document.getElementById("loading").innerText = messages[messageIndex];
+                    messageIndex = (messageIndex + 1) % messages.length;
+                }
+            }
+
+            setInterval(changeMessage, 7000);       // 7 seconds interval
+
+            function startClassification() {
+                fetch(`/start_classification/${filename}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ filename, model_choice })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById("loading").innerHTML = "Error: " + data.error;
+                } else {
+                    window.location.href = `/classification_result?pdf_url=${encodeURIComponent(data.pdf_url)}&model_url=${encodeURIComponent(data.model_url)}&log_url=${encodeURIComponent(data.log_url)}`;
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+        }
+        
+        function updateStatus() {
+            fetch('/progress')
+                .then(response => response.json())
+                .then(data => {
+                    showProgressStatus = true;
+                    document.getElementById("loading").innerHTML = data.status;
+
+                    setTimeout(() => {
+                        showProgressStatus = false;
+                        changeMessage();
+                    }, 1500)
+                });
+        }
+
+        startClassification();                  // Start classification using AJAX
+        setInterval(updateStatus, 5000);        // Update the status every 1 second
+        </script>
+    </body>
+</html>
