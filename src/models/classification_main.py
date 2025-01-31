@@ -30,6 +30,12 @@ def run_classification(file_key, model_choice):
 
     regression = preprocess.is_continuous_data  # T- regression, F - classification
 
+    mode = None
+    if regression == True:
+        mode = 'regression'
+    else:
+        mode = 'classification'
+
     X = df.drop(columns=target)
     y = df[target]
 
@@ -39,13 +45,13 @@ def run_classification(file_key, model_choice):
     ]
 
     if model_choice in ['Naive Bayes', 'Decision Tree', 'Random Forest', 'Logistic Regression']:
-        best_model, model_accuracy, model_score, y_type, label_map = individual_model(model_choice, regression, X, y)
+        best_model, model_accuracy, model_score, y_type, label_map = individual_model(model_choice, X, y, mode=mode)
         model_name = model_choice
         model_scores = f"Accuracy: {model_accuracy: .4f}, Score: {model_score: .4f}"
     
     elif model_choice == 'Find Best Model':
         models, LR_best_params, LR_tuned_scores = build_model_dict(X, y)
-        best_model_name, model_names, best_model, best_score, label_map, y_type = select_model.model_selection(models, X, y, k=5)
+        best_model_name, model_names, best_model, best_score, label_map, y_type = select_model.model_selection(models, X, y, mode=mode, k=5)
         model_name = best_model_name
         
         model_scores = f"Score with {model_name}: {best_score: .4f}"
