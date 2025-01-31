@@ -1,7 +1,6 @@
 # Load libraries
-from pathlib import Path
 import pandas as pd
-from src.common import spark, spark_processing, pandas_processing
+from .common import spark, spark_processing, pandas_processing
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -132,7 +131,7 @@ def elbow_plot(elbow_point, wcss, file_name, algorithm, threshold):
     plt.xlabel('Number of clusters')
     plt.ylabel('WCSS')
     plt.title(f'{file_name}_{threshold}_Elbow Method')
-    plt.savefig(f'./static/_img/{file_name}_{threshold}_{algorithm}_Elbow_Method.png')
+    #plt.savefig(f'./static/_img/{file_name}_{threshold}_{algorithm}_Elbow_Method.png')
 
 # Algorithm for choosing the number of clusters. 
 def choose_cluster(elbow, silhouette):
@@ -193,14 +192,14 @@ def plot_cluster(pca_df, file_name, algorithm, threshold):
         axs = plt.subplots()
         axs = sns.scatterplot(x=pca_df[0], y=pca_df[1], hue='Agglomerative Cluster', data=pca_df)
         plt.title(f'{file_name} {threshold} {algorithm} Cluster')
-        plt.savefig(f'./static/_img/{file_name}_{threshold}_Agglomerative_Cluster.png')
+        #plt.savefig(f'./static/_img/{file_name}_{threshold}_Agglomerative_Cluster.png')
     
     # If user choose only k-Means clustering algorithm, then plot k-Means cluster
     if 'k-Means Cluster' in pca_df.columns:
         axs = plt.subplots()
         axs = sns.scatterplot(x=pca_df[0], y=pca_df[1], hue='k-Means Cluster', data=pca_df)
         plt.title(f'{file_name} {threshold} {algorithm} Cluster')
-        plt.savefig(f'./static/_img/{file_name}_{threshold}_k-Means_Cluster.png')
+        #plt.savefig(f'./static/_img/{file_name}_{threshold}_k-Means_Cluster.png')
 
 # Determine optimal number of clusters using silhouette method
 class silhouetteAnalyze:
@@ -246,6 +245,6 @@ class silhouetteAnalyze:
         plt.xlabel('Number of clusters')
         plt.ylabel('Silhouette Score')
         plt.title(f'{file_name}_{threshold}_Silhouette Method')
-        plt.savefig(f'./static/_img/{file_name}_{threshold}_{algorithm}_Silhouette_Method.png')
+        #plt.savefig(f'./static/_img/{file_name}_{threshold}_{algorithm}_Silhouette_Method.png')
 
 

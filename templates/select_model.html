@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>select Classification Model</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}"> 
+    </head>
+    <body>
+        <h1>Select a Classification Model for {{ filename }}</h1>
+
+        <form action="{{ url_for('process_classification', filename=filename) }}" method="post">
+            <label for="model">Select a model:</label>
+            <select id="model" name="model">
+                <option value="Naive Bayes">Naive Bayes</option>
+                <option value="Decision Tree">Decision Tree</option>
+                <option value="Random Forest">Random Forest</option>
+                <option value="Logistic Regression">Logistic Regression</option>
+                <option value="Find Best Model">Find Best Model</option>
+            </select>
+            <button type="submit">Submit</button>  
+        </form>
+        {% include 'footer.html' %}
+    </body>
+</html>

@@ -1,12 +1,19 @@
 import os
-from src.clustering_main import cluster
-from flask import Flask, render_template, request, redirect, url_for, send_file, flash
+import models as models
+from models import run_cluster, run_classification, common
+from logger_utils import setup_global_logger
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify, session
 from werkzeug.utils import secure_filename
 import boto3
 from dotenv import load_dotenv
 from flask_swagger_ui import get_swaggerui_blueprint
 import logging
 from pyspark import SparkConf, SparkContext
+import io
+import pandas as pd
+from fpdf import FPDF
+import zipfile
+import pickle
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,8 +40,8 @@ s3 = boto3.client(
 )
 
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
-UPLOAD_FOLDER = '/tmp'
 
+UPLOAD_FOLDER = '/tmp'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 SWAGGER_URL = '/swagger'
@@ -47,7 +54,11 @@ swagger_ui_blueprint = get_swaggerui_blueprint(
     }
 )
 
+logger, upload_log_to_s3 = setup_global_logger(s3, bucket_name=S3_BUCKET_NAME)#, log_filename=current_filename)
+
 app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
+
+current_filename = None
 
 @app.route('/')
 def home():
@@ -63,6 +74,7 @@ def classification():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    global logger, upload_log_to_s3
     if 'file' not in request.files:
         return redirect(request.url)
     
@@ -71,23 +83,33 @@ def upload_file():
     
     if file.filename == '':
         return redirect(request.url)
+    
     if file:
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(file_path)
+        global filename
+        filename = file.filename
+
+        for handler in logger.handlers[:]:
+            logger.removeHandler(handler)
         
+        logger, upload_log_to_s3 = setup_global_logger(s3, bucket_name=S3_BUCKET_NAME, log_filename=filename)
+
+        # Use the existing function to upload the file directly to S3
         s3_file_path = f"uploaded/{file.filename}"
-        s3.upload_file(file_path, S3_BUCKET_NAME, s3_file_path)
-        os.remove(file_path)
+
+        # Call the upload function with the file, S3 bucket name, and the target file path
+        upload_user_file_to_s3(file, S3_BUCKET_NAME, s3_file_path)
+
+        print(f"File {file.filename} uploaded to S3 bucket {S3_BUCKET_NAME}")
         
-        # User choose clustering option
+        # File uploaded, now decide what to do based on the selected task
         if task == 'clustering':
             print("clustering chose")
             return redirect(url_for('process_clustering', filename=file.filename))
 
         
         # User choose classification option
-       # elif task == 'classification':
-       #     return redirect(url_for('process_classification', filename=file.filename))
+        elif task == 'classification':
+           return redirect(url_for('process_classification', filename=file.filename))
     
     return redirect(url_for('index'))
 
@@ -107,22 +129,26 @@ def process_clustering(filename):
 
         try:
             # Implement main function and generate report and result file
-            pdf_file, csv_file = cluster(s3_file_path, threshold, algorithm, plot)
+            pdf_file, csv_file = run_cluster(s3_file_path, threshold, algorithm, plot)
 
-            result_folder_path = "result/"
+            files_to_upload = {
+                f"{filename}_report.pdf": pdf_file,
+                f"{filename}_results.csv": csv_file
+            }
 
-            # Upload generated report and result file to S3 bucket
-            pdf_s3_key = upload_to_s3(pdf_file, S3_BUCKET_NAME)
-            csv_s3_key = upload_to_s3(csv_file, S3_BUCKET_NAME)
+            # Upload the generated report and result file directly to S3
+            print("\nUploading files to S3...\n")
+            upload_to_s3_direct(S3_BUCKET_NAME, files_to_upload)
+            print("\nUplad function executed.\n")
 
             # Generate presigned URL
-            pdf_url = generate_presigned_url(S3_BUCKET_NAME, pdf_s3_key)
-            csv_url = generate_presigned_url(S3_BUCKET_NAME, csv_s3_key)
+            pdf_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_report.pdf")
+            csv_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_results.csv")
 
             print(f"PDF URL: {pdf_url}")
             print(f"CSV URL: {csv_url}")
 
-            return render_template('result.html', pdf_url=pdf_url, csv_url=csv_url)
+            return render_template('clustering_result.html', pdf_url=pdf_url, csv_url=csv_url)
         
         # If file extention is not suported, delet the file from S3 Bucket
         except ValueError as e:
@@ -133,23 +159,213 @@ def process_clustering(filename):
 
     return render_template('process_clustering.html', filename=filename)
 
-# Upload generated files to S3 bucket
-def upload_to_s3(file_name, bucket_name):
+@app.route('/process_classification/<filename>', methods=['GET', 'POST'])
+def process_classification(filename):
+    if request.method == 'POST':
+        model_choice = request.form.get('model')
+
+        if not model_choice:
+            flash("Please select a model.")
+            return redirect(request.url)
+        
+        # After choose the model, move to loading page
+        return render_template('loading.html', filename=filename, model_choice=model_choice)
+    return render_template('select_model.html', filename=filename)
+
+@app.route('/start_classification/<filename>', methods=['POST'])
+def start_classification(filename):
+    global progress_status
+    data = request.json
+    #filename = data.get('filename')
+    model_choice = data.get("model_choice")
+
+    if not filename or not model_choice:
+        return jsonify({"error": "Missing filename or model choice"}), 400
+    
+    print(f"\n\nReceived filename: {filename}, model choice: {model_choice}\n\n")  # 디버깅 메시지
+
+    
+    s3_file_path = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/uploaded/{filename}"
+    progress_status = "Training started..."
+
     try:
-        s3.upload_file(file_name, bucket_name, f'result/{file_name}')
-        print(f"File {file_name} uploaded to S3 bucket {bucket_name} as {file_name}.\n")
-        return file_name
+        try:
+            pdf_file, model_buffer = run_classification(s3_file_path, model_choice=model_choice)
+        except Exception as e:
+            return jsonify({"error": "Error during classification processing."}), 500
+
+        model_filename = f'{filename}_{model_choice}_model_and_info.zip'
+        pdf_filename = f'{filename}_{model_choice}_Report.pdf'
+
+        files_to_uploads = {
+            model_filename: model_buffer,
+            pdf_filename: pdf_file
+        }
+
+        upload_to_s3_direct(S3_BUCKET_NAME, files=files_to_uploads)
+        upload_log_to_s3()
+        print(f"ZIP file uploaded to S3: {model_filename}")
+
+        # Generate Download URL
+        model_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_model_and_info.zip")
+        pdf_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_Report.pdf")
+        log_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_log.log")
+
+        print(f"\n\nGenerated URLs: model_url = {log_url}")#, pdf_url = {pdf_url}, log_url = {log_url}\n\n")  # 디버깅 메시지
+
+        progress_status = "Classification completed!"
+        return jsonify({
+            "pdf_url": pdf_url,
+            "model_url": model_url,
+            "log_url": log_url,
+            })
     
     except Exception as e:
-        print(f"Error uploading {file_name}: {str(e)}")
+        progress_status = "Error occurred!"
+        return jsonify({"Error": str(e)}), 500
+
+progress_status = "Waiting..."
+
+@app.route('/classification_result')
+def classification_result():
+    pdf_url = request.args.get('pdf_url')
+    model_url = request.args.get('model_url')
+    log_url = request.args.get('log_url')
+
+    if not pdf_url or not model_url or not log_url:
+        return "Missing parameters", 400
+    
+    return render_template(
+        'classification_result.html',
+        pdf_url=pdf_url,
+        model_url=model_url,
+        log_url=log_url
+    )
+
+@app.route('/progress')
+def progress():
+    global progress_status
+    return jsonify({"status": progress_status})
+
+@app.route('/view_log')
+def view_log():
+    log_url = request.args.get('filename')
+
+    if log_url:
+        print(f"\n[DEBUG] Received log_url: {log_url}")
+        try:
+            log_content = get_log_content_from_s3(log_url)
+            if log_content:
+                return render_template('view_log.html', log_content=log_content.splitlines(), filename=log_url.split('/')[-1])
+            else:
+                print(f"\n[ERROR] Could not retrieve log content for {log_url}")
+                return "Error retrieving log content.", 500
+        except Exception as e:
+            print(f"[ERROR] retrieving log file: {str(e)}")
+            return f"Error retrieving log file: {str(e)}", 500
+    else:
+        return "No log file URL provided", 400
+
+def get_log_content_from_s3(log_url):
+    # Convert S3 URL to Key
+    s3_key = log_url.split('?')[0].replace(f'https://{S3_BUCKET_NAME}.s3.amazonaws.com/', '')  # Extract Key from S3 path
+
+    print(f"Debug: Attempting to retrieve log from S3 with key:{s3_key}")  # 디버깅용 로그
+
+    try:
+        response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+        log_content = response['Body'].read().decode('utf-8')  # Read file content
+        return log_content
+    except s3.exceptions.NoSuchKey as e:
+        print(f"[ERROR] Object not found. Ensure the key is correct: {e}")
+    except Exception as e:
+        print(f"Error reading log file from S3: {e}")  # 디버깅용 로그
         return None
 
+@app.route('/download_log/<filename>')
+def download_log(filename):
+    log_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_log.log")
+    return redirect(log_url)
+
+# Upload generated files to S3 bucket
+def upload_to_s3_direct(bucket_name, files):
+    '''
+    Upload the file data directly to S3 without saving it locally
+
+    Parameters
+    - file_name: The name of the file to be uploaded
+    - bucket_name: The name of the S3 bucket
+    - files (dict): The content to upload, in byt-like format (e.g., byte string, file object)
+    '''
+    # Iterate through the files and upload each one to S3
+    for file_name, file_data in files.items():
+        file_buffer = io.BytesIO()
+
+        # Handle different file types
+        if isinstance(file_data, io.BytesIO):
+            file_buffer = file_data
+            print(f"\nCOnvertin {file_name} to ...")
+        elif isinstance(file_data, pd.DataFrame):     # For CSV
+            print(f"\nCOnverting {file_name} to CSV format...")
+            file_data.to_csv(file_buffer, index=False)
+        elif isinstance(file_data, type(FPDF())):   # For PDF
+            print(f"\nGenerating PDF: {file_name}...\n")
+            file_data.output(file_buffer)
+        elif isinstance(file_data, str):    # For log or other text files
+            print(f"\nProcessing log file: {file_name}")
+            file_buffer.write(file_data.encode('utf-8'))
+        elif isinstance(file_data, bytes):      # If file is already in bytes (like model.pkl)
+            print(f"\nProcessing model file: {file_name}...\n")
+            file_buffer.write(file_data)
+        else:
+            pickle.dump(file_data, file_buffer)
+        
+        file_buffer.seek(0)
+
+        try:
+            # Upload the file to S3
+            print(f"Uploading {file_name} to S3...")
+            s3.upload_fileobj(file_buffer, bucket_name, f'result/{file_name}')
+            print(f"File {file_name} uploaded to S3 bucket {bucket_name}.")
+        
+        except Exception as e:
+            print(f"Error uploading {file_name} to S3: {e}")
+
+def upload_user_file_to_s3(file, bucket_name, file_name):
+    '''
+    Upload user-provided file to S3
+
+    Parameters
+    - file: The file object uploaded by the user (request.files['file'])
+    - bucket_name: The name of the S3 bucket
+    - file_name: The name to store the file as in the S3 bucket
+    '''
+    try:
+        # Convert the file to BytesIO (in-memory file-like object)
+        file_buffer = io.BytesIO()
+        file.save(file_buffer)
+        file_buffer.seek(0)
+        print(f"[DEBUG] File {file_name} loaded into memory")
+
+        file_size = len(file_buffer.getvalue())
+        print(f"[DEBUG] File size: {file_size} bytes")
+
+        # Upload the file to S3
+        s3.upload_fileobj(file_buffer, bucket_name, f'uploads/{file_name}')#, ExtraArgs={'ACL':'public-read'})
+        print(f"File {file_name} uploaded to S3 bucket {bucket_name}.")
+        return f'File {file_name} uploaded successfully to S3.'
+
+    except Exception as e:
+        print(f"Error uploading file {file_name}: {e}")
+        return f"Error uploading {file_name}: {str(e)}"
+    
 # Generate presigned URL to able download files
 def generate_presigned_url(bucket_name, s3_key, expiration=36000):
     try:
+        print(f"\n\nGenerating presigned URL for s3 key: {s3_key}")
         result_path = 'result/'
         response = s3.generate_presigned_url('get_object',
-                                             Params={'Bucket': bucket_name, 'Key': result_path + s3_key},
+                                             Params={'Bucket': bucket_name, 'Key': s3_key},
                                              ExpiresIn=expiration)
         
         return response
@@ -158,4 +374,4 @@ def generate_presigned_url(bucket_name, s3_key, expiration=36000):
         return None
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True)#, host='0.0.0.0', port=5000)

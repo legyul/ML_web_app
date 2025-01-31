@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>View Log - {{ filename }}</title>
+        <style>body { font-family: Arial, sans-serif; }</style>
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    </head>
+    <body>
+        <h2>Log File: {{ filename }}</h2>
+        <pre>
+            {% for line in log_content %}
+                {{ line }}
+            {% endfor %}
+        </pre>
+        <a href="{{ url_for('download_log', filename=filename) }}">Download Log</a>
+        {% include 'footer.html' %}
+    </body>
+</html>

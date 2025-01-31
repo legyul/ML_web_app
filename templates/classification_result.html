@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Classification Result</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    </head>
+    <body>
+        <h1>Classification Result</h1>
+        <p>Your classification is complete!</p>
+        <p class="download-text">Here are the results of the classification operation:</p>
+        <ul class="download-list">
+            <li><a id="pdf_link" href="{{ pdf_url }}" target="_blank">Downdload the Classification Report (PDF)</a></li>
+            <li><a id="model_link" href="{{ model_url }}" target="_blank">Download Trained Model</a></li>
+            <li><a id="log_link" href="{{ url_for('view_log', filename=log_url)  }}" class="button">View Log</a></li>
+        </ul>
+        {% include 'footer.html' %}
+
+        <script>
+            // Get URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const pdfUrl = urlParams.get('pdf_url');
+            const modelUrl = urlParams.get('model_url');
+            const logUrl = urlParams.get('log_url');
+
+            consol.log("\n\n  pdfUrl:", pdfUrl);
+            consol.log("\n  modelUrl:", modelUrl);
+            consol.log("\n  logUrl:", logUrl);
+
+            // Set the links for the downloaded files dynamically
+            document.getElementById('pdf_link').href = decodeURIComponent(pdfUrl);
+            document.getElementById('model_link').href = decodeURIComponent(modelUrl);
+            document.getElementById('log_link').href = decodeURIComponent(logUrl);
+        </script>
+    </body>
+</html>
