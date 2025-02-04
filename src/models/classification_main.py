@@ -1,6 +1,4 @@
-#import models
 from .common import load_file
-# from models import classification_models
 from .classification_models import preprocess, select_model, build_model_dict, BestModel, individual_model
 from model_utils import save_model_with_info
 from pathlib import Path
@@ -17,7 +15,6 @@ def run_classification(file_key, model_choice):
     model_info_buffer = io.BytesIO()
     model_buffer = io.BytesIO()
 
-    #doc = SimpleDocTemplate(f"./result/_doc/{file_name}_Classification_Report.pdf", pagesize=letter)
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='Bold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=12))
 
@@ -26,16 +23,16 @@ def run_classification(file_key, model_choice):
 
     df, _ = load_file(file_key)
 
-    df, target, language_column, bow_list = preprocess.preprocess_language_columns(df)
+    df, target, language_column, bow_list = preprocess.preprocess_text_columns(df)
 
     regression = preprocess.is_continuous_data  # T- regression, F - classification
-
+    
     mode = None
     if regression == True:
         mode = 'regression'
     else:
         mode = 'classification'
-
+    
     X = df.drop(columns=target)
     y = df[target]
 
@@ -58,7 +55,7 @@ def run_classification(file_key, model_choice):
     
     if y_type == 'categorical':
         model = BestModel(model=best_model, label_mapping=label_map)
-
+        
         model_info_buffer, model_buffer = save_model_with_info(model=model, model_name=model_name, required_packages=required_packages)
     
     else:

@@ -1,4 +1,3 @@
-import models
 from models import common
 from .clustering import filter_data, elbow, elbow_plot, silhouetteAnalyze, choose_cluster, choose_algo, visualize_pca, plot_cluster, pd, plt
 from pathlib import Path

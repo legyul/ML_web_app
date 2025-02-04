@@ -16,6 +16,9 @@ from pyspark.sql import functions as F
 
 
 load_dotenv()
+os.environ["JAVA_HOME"] = '/usr/lib/jvm/java-11-openjdk-arm64'
+os.environ["SPARK_HOME"] = '/usr/local/spark'
+
 spark = SparkSession.builder.appName("DataPreprocessing").getOrCreate()
 
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')

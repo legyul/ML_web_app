@@ -1,6 +1,7 @@
 import os
-import models as models
-from models import run_cluster, run_classification, common
+import sys
+#import models as models
+from .models import run_cluster, run_classification, common
 from logger_utils import setup_global_logger
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify, session
 from werkzeug.utils import secure_filename
@@ -17,6 +18,9 @@ import pickle
 
 # Load environment variables from .env file
 load_dotenv()
+
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 template_dir = os.path.abspath('./templates')
 static_dir = os.path.abspath('./static')

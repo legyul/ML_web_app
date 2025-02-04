@@ -91,6 +91,11 @@ input, select {
 .social-links {
     margin-top: 15px;
     font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
 }
 
 .social-links a {
@@ -99,9 +104,9 @@ input, select {
     font-weight: bold;
     text-decoration: none;
     transition: color 0.3s ease;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 5px;
 }
 
 .social-links ul {

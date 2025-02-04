@@ -3,10 +3,10 @@ import numpy as np
 import math
 from collections import defaultdict, Counter
 import re
-from common import setup_global_logger
+from .common import setup_global_logger
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-from sklearn.model_selection import train_test_split, KFold
+from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, r2_score
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.feature_selection import SelectKBest, chi2
@@ -61,20 +61,21 @@ class preprocess:
         - bool: True if the dataset can be used with a regression model, False if classification is needed
         '''
         if isinstance(y, pd.DataFrame):
-            y = y.iloc[:, 0]
+            y = y.iloc[:, 0].values
 
         # Check if the target (y) is continuous
-        unique_values = y.nunique()
-        if unique_values <= 1:
-            logger.debug("Target is not continuous (only one unique value).")
-            return False        # Target variable is constanct, regression is not applicable
+        unique_values = len(np.unique(y))
+        return unique_values > 1 and np.issubdtype(y.dtype, np.number)
+        # if unique_values <= 1:
+        #     logger.debug("Target is not continuous (only one unique value).")
+        #     return False        # Target variable is constanct, regression is not applicable
         
-        if y.dtype not in ['float64', 'int64']:
-            logger.debug("Target varibale is not numeric, classification model needed.")
-            return False        # Target is not numeric, cannot use regression
+        # if y.dtype not in ['float64', 'int64']:
+        #     logger.debug("Target varibale is not numeric, classification model needed.")
+        #     return False        # Target is not numeric, cannot use regression
         
-        logger.debug("Regression model is applicable.")  
-        return True
+        # logger.debug("Regression model is applicable.")  
+        # return True
 
     def detect_id_columns(data):
         '''
@@ -549,12 +550,25 @@ class numeric:
             unique_classes = np.unique(y)
             
             if self.num_class is None:
-             self.num_class = len(unique_classes)
+                self.num_class = len(unique_classes)
+            
+            best_feature, best_threshold, best_gain = self._find_best_split(X, y)
+
+            if best_gain == -float('inf'):
+                self.value = np.bincount(y).argmax() if self.mode == 'classification' else np.mean(y)
+                return
+            
+            # left_mask, right_mask = X[best_feature] <= best_threshold, X[best_feature] > best_threshold
+            # self.feature, self.threshold = best_feature, best_threshold
+            # self.left, self.right = numeric.DecisionTree(mode=self.mode, num_class=self.num_class), numeric.DecisionTree(mode=self.mode, num_class=self.num_class)
+            # self.left.fit(X[left_mask], y[left_mask])
+            # self.right.fit(X[right_mask], y[right_mask])
+
 
             # Stopping condition: All labels are the same
             if len(unique_classes) == 1:
                 self.value = y.iloc[0] if isinstance(y, pd.Series) else y[0]
-                # logger.debug(f"Stopping at leaf: class={self.value}, num_class={self.num_class}")
+                logger.debug(f"Stopping at leaf: class={self.value}, num_class={self.num_class}")
                 return
             
             # Stopping condition: Not enough samples
@@ -567,7 +581,7 @@ class numeric:
             best_feature, best_threshold, best_gain = self._find_best_split(X, y)
             if best_gain < min_gain:
                 self.value = y.mode()[0] if self.mode == 'classification' else y.mean()
-                # logger.debug(f"Stopping due to low gain: value={self.value}, num_class={self.num_class}")
+                logger.debug(f"Stopping due to low gain: value={self.value}, num_class={self.num_class}")
                 return
             
             # Perform the split
@@ -577,7 +591,7 @@ class numeric:
             if left_mask.sum() == 0 or right_mask.sum() == 0:
                 # Handle case where one split is empty
                 self.value = y.mode()[0] if self.mode == 'classification' else y.mean()
-                # logger.debug(f"Stopping due to empty split: value={self.value}, num_class={self.num_class}")
+                logger.debug(f"Stopping due to empty split: value={self.value}, num_class={self.num_class}")
                 return
 
             # Create left and right subtrees
@@ -593,7 +607,7 @@ class numeric:
 
             self.left, self.right = results
 
-            # logger.debug(f"Tree built at depth {depth} with feature={self.feature} and threshold={self.threshold}")
+            logger.debug(f"Tree built at depth {depth} with feature={self.feature} and threshold={self.threshold}")
 
         def _find_best_split(self, X, y):
             '''
@@ -618,6 +632,8 @@ class numeric:
             # Iterate over all features
             for feature in X.columns:
                 unique_values = np.unique(X[feature])
+                if len(unique_values) > 50:
+                    unique_values = np.quantile(unique_values, np.linspace(0.1, 0.9, 10))
                 for value in unique_values:
                     left_mask = X[feature] <= value
                     right_mask = X[feature] > value
@@ -650,10 +666,10 @@ class numeric:
             - list: Predicted values for all samples
             - float/int: Predicted value
             '''
-            predictions = []
-            for _, row in X.iterrows():
-                pred = self._predict_single(row)
-                predictions.append(round(pred))
+            predictions = np.array([self._predict_single(row) for _, row in X.iterrows()])
+            # for _, row in X.iterrows():
+            #     pred = self._predict_single(row)
+            #     predictions.append(round(pred))
             
             return predictions
 
@@ -765,31 +781,7 @@ class numeric:
             self.trees = []
             self.num_class = 2
             self.random_state = random_state
-
-        def _train_and_evaluate(self, n_trees, max_depth, X_train, y_train, X_val, y_val):
-            '''
-            Train and evaluate a RandomForest model for given parameters.
-
-            Parameters:
-            - n_trees (int): Number of trees in the forest
-            - max_depth (int): Maximum depth of each tree
-            - X_train (DataFrame): Training input features
-            - y_train (Series): Training target labels
-            - X_val (DataFrame): Validation input features
-            - y_val (Series): Validation target labels
-
-            Returns:
-            - float: Evaluation score (accuracy for classification, R² for regression)
-            '''
-            forest = numeric.RandomForest(n_trees=n_trees, max_depth=max_depth, mode=self.mode)
-            forest.fit(X_train, y_train)
-            predictions = forest.predict(X_val)
-
-            if self.mode == 'classification':
-                return accuracy_score(y_val, predictions)
-            else:
-                return np.corrcoef(y_val, predictions)[0, 1] ** 2
-            
+    
         def optimize_n_trees_depth(self, X, y, n_jobs=-1, random_state=42):
             '''
             Use a validation set to explore the optimal number of trees and max depth
@@ -815,23 +807,28 @@ class numeric:
 
             def train_and_evaluate(n_trees, max_depth):
                 try:
-                    self.n_trees = n_trees
-                    self.max_depth = 25
-                    self.trees = []
-
-                    for _ in range(self.n_trees):
-                        tree = numeric.DecisionTree(mode=self.mode, num_class=self.num_class)
-                        tree.fit(X_train, y_train)
-                        self.trees.append(tree)
-                    
-                    predictions = self.predict(X_val)
-
-                    if self.mode == 'classification':
-                        score = accuracy_score(y_val, predictions)
-                    else:
-                        score = np.corrcoef(y_val, predictions)[0, 1] ** 2
-                
+                    forest = numeric.RandomForest(n_trees=n_trees, max_depth=max_depth, mode=self.mode)
+                    forest.fit(X_train, y_train)
+                    predictions = forest.predict(X_val)
+                    score = accuracy_score(y_val, predictions) if self.mode == 'classification' else r2_score(y_val, predictions)
                     return score, n_trees, max_depth
+                    # self.n_trees = n_trees
+                    # self.max_depth = 25
+                    # self.trees = []
+
+                    # for _ in range(self.n_trees):
+                    #     tree = numeric.DecisionTree(mode=self.mode, num_class=self.num_class)
+                    #     tree.fit(X_train, y_train)
+                    #     self.trees.append(tree)
+                    
+                    # predictions = self.predict(X_val)
+
+                    # if self.mode == 'classification':
+                    #     score = accuracy_score(y_val, predictions)
+                    # else:
+                    #     score = np.corrcoef(y_val, predictions)[0, 1] ** 2
+                
+                    # return score, n_trees, max_depth
                 except Exception as e:
                     logger.error(f"Error in train_and_evaluate with n_trees={n_trees} and max_depth={max_depth}: {e}")
                     return None, n_trees, max_depth
@@ -845,8 +842,8 @@ class numeric:
             results = [result for result in results if result[0] is not None]
 
             if not results:
-                logger.error("No valid results from the train and evaluate process.")
-                return None, None
+                logger.error("No valid results from the train and evaluate process. Setting default values.")
+                return 10, 5
 
             for score, n_trees, max_depth in results:
                 if score> best_score:
@@ -882,7 +879,7 @@ class numeric:
             self.num_class = len(classes)
 
             np.random.seed(self.random_state)
-
+            
             if self.n_trees is None or self.max_depth is None:
                 best_n_trees, best_max_depth = self.optimize_n_trees_depth(X, y, n_jobs=n_jobs)
 
@@ -890,12 +887,12 @@ class numeric:
                 self.max_depth = best_max_depth
             
             self.trees = Parallel(n_jobs=n_jobs)(
-                delayed(self._train_tree)(X, y, 42, i) for i in range(self.n_trees)
+                delayed(self._train_tree)(X, y, i) for i in range(self.n_trees)
             )
 
             logger.info(f"Training compled. {len(self.trees)} trees trained and {self.num_class}.")
 
-        def _train_tree(self, X, y, random_state, tree_idx):
+        def _train_tree(self, X, y, seed):#random_state, tree_idx):
             '''
             Train a single Decision Tree for the RandomForest.
 
@@ -908,6 +905,9 @@ class numeric:
             Returns:
             - tree: The trained DecisionTree
             '''
+            np.random.seed(seed)
+            indices = np.random.choice(len(X), len(X), replace=True)
+            X_sample, y_sample = X.iloc[indices], y.iloc[indices]
             tree = numeric.DecisionTree(mode=self.mode, num_class=self.num_class)
             tree.fit(X, y)
             return tree
@@ -1140,7 +1140,7 @@ class numeric:
             val_losses = []
 
             # Set up k-fold cross-validation
-            kf = KFold(n_splits=k, shuffle=True)
+            skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
 
             # Early stopping initialization
             best_val_loss = float('inf')                    # Set the initial best validation loss to infinity 
@@ -1153,7 +1153,7 @@ class numeric:
                 epoch_val_loss = 0
 
                 # Perform k-fold cross-validation
-                for train_idx, val_idx in kf.split(X):
+                for train_idx, val_idx in skf.split(X, y):
                     train_X, val_X = X[train_idx], X[val_idx]
                     train_y, val_y = y[train_idx], y[val_idx]
 
@@ -1440,7 +1440,7 @@ class select_model:
         '''
         try:
             # Initialize k-fold cross-validation splitter
-            kf = KFold(n_splits=k, shuffle=True, random_state=42)
+            skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
             logger.debug(f"Current model (cross_validation_joblib): {model_class}")
 
             def train_and_evaluate(train_idx, val_idx):
@@ -1476,7 +1476,7 @@ class select_model:
             
             scores = Parallel(n_jobs=n_jobs)(
                 delayed(train_and_evaluate)(train_idx, val_idx)
-                for train_idx, val_idx in kf.split(X)
+                for train_idx, val_idx in skf.split(X, y)
             )
             
             avg_score = np.mean([score for score in scores if score is not None])        # Filter out failed folds
