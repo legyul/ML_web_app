@@ -36,13 +36,9 @@ sc = SparkContext.getOrCreate(conf=conf)
 
 #print("Template directory: ", os.path.abspath('./templates'))
 # S3 Client configuration
-s3 = boto3.client(
-    's3',
-    aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
-)
+s3 = boto3.client('s3')
 
-S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
+S3_BUCKET_NAME = "ml-platform-service"
 
 UPLOAD_FOLDER = '/tmp'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
