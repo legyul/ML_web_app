@@ -1,7 +1,6 @@
 import os
 import sys
-#import models as models
-from .models import run_cluster, run_classification, common
+from models import run_cluster, run_classification #, common
 from logger_utils import setup_global_logger
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify, session
 from werkzeug.utils import secure_filename
@@ -185,8 +184,6 @@ def start_classification(filename):
 
     if not filename or not model_choice:
         return jsonify({"error": "Missing filename or model choice"}), 400
-    
-    print(f"\n\nReceived filename: {filename}, model choice: {model_choice}\n\n")  # 디버깅 메시지
 
     
     s3_file_path = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/uploaded/{filename}"
@@ -208,14 +205,11 @@ def start_classification(filename):
 
         upload_to_s3_direct(S3_BUCKET_NAME, files=files_to_uploads)
         upload_log_to_s3()
-        print(f"ZIP file uploaded to S3: {model_filename}")
 
         # Generate Download URL
         model_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_model_and_info.zip")
         pdf_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_Report.pdf")
-        log_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_log.log")
-
-        print(f"\n\nGenerated URLs: model_url = {log_url}")#, pdf_url = {pdf_url}, log_url = {log_url}\n\n")  # 디버깅 메시지
+        log_url = generate_presigned_url(S3_BUCKET_NAME, f"result/logs/{filename}_log.log")
 
         progress_status = "Classification completed!"
         return jsonify({
@@ -262,7 +256,6 @@ def view_log():
             if log_content:
                 return render_template('view_log.html', log_content=log_content.splitlines(), filename=log_url.split('/')[-1])
             else:
-                print(f"\n[ERROR] Could not retrieve log content for {log_url}")
                 return "Error retrieving log content.", 500
         except Exception as e:
             print(f"[ERROR] retrieving log file: {str(e)}")
@@ -288,7 +281,7 @@ def get_log_content_from_s3(log_url):
 
 @app.route('/download_log/<filename>')
 def download_log(filename):
-    log_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_log.log")
+    log_url = generate_presigned_url(S3_BUCKET_NAME, f"result/logs/{filename}_log.log")
     return redirect(log_url)
 
 # Upload generated files to S3 bucket
@@ -329,7 +322,7 @@ def upload_to_s3_direct(bucket_name, files):
         try:
             # Upload the file to S3
             print(f"Uploading {file_name} to S3...")
-            s3.upload_fileobj(file_buffer, bucket_name, f'result/{file_name}')
+            s3.upload_fileobj(file_buffer, bucket_name, f'result/logs/{file_name}')
             print(f"File {file_name} uploaded to S3 bucket {bucket_name}.")
         
         except Exception as e:
