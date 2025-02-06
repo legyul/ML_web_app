@@ -70,4 +70,4 @@ RUN export $(cat .env | xargs)
 # EXPOSE 80
 
 # 7. Run Flask server
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "src.app:app"]
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "--timeout", "300", "--worker-class", "gthread", "--threads", "4", "src.app:app"]
