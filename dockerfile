@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install OpenJDK 11 (Adoptium Temurin JDK)
-RUN curl -L -o jdk11.tar.gz https://github.com/adoptium/temurin11-binaries/releases/latest/download/OpenJDK11U-jdk_x64_linux_hotspot.tar.gz \
+RUN curl -L -o jdk11.tar.gz https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.22+7/OpenJDK11U-jdk_x64_linux_hotspot_11.0.22_7.tar.gz \
     && mkdir -p /usr/lib/jvm/java-11-openjdk-amd64 \
     && tar -xvzf jdk11.tar.gz -C /usr/lib/jvm/java-11-openjdk-amd64 --strip-components=1 \
     && rm jdk11.tar.gz
