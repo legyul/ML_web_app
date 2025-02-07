@@ -6,7 +6,6 @@ WORKDIR /app
 
 ENV PYTHONPATH=/app/src
 
-ENV DEBIAN_FRONTEND=noninteractive
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 ENV SPARK_HOME=/usr/local/spark
@@ -19,16 +18,13 @@ RUN apt-get update && apt-get install -y \
     curl \
     tar \
     gzip \
-    openjdk-11-jdk-headless \
-    && rm -rf /var/lib/apt/lists/*
+    software-properties-common
 
 # Download and install OpenJDK 11 (Adoptium Temurin JDK)
-# RUN mkdir -p /usr/lib/jvm && \
-#     cd /usr/lib/jvm && \
-#     curl -L -o openjdk11.tar.gz https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.20%2B8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.20_8.tar.gz && \
-#     tar -xvzf openjdk11.tar.gz && \
-#     mv jdk-11.0.20+8 java-11-openjdk-amd64 && \
-#     rm openjdk11.tar.gz
+RUN curl -L -o jdk11.tar.gz https://github.com/adoptium/temurin11-binaries/releases/latest/download/OpenJDK11U-jdk_x64_linux_hotspot.tar.gz \
+    && mkdir -p /usr/lib/jvm/java-11-openjdk-amd64 \
+    && tar -xvzf jdk11.tar.gz -C /usr/lib/jvm/java-11-openjdk-amd64 --strip-components=1 \
+    && rm jdk11.tar.gz
 
 # Install Spark
 RUN curl -O https://archive.apache.org/dist/spark/spark-3.5.2/spark-3.5.2-bin-hadoop3.tgz \
