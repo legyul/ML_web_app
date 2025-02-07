@@ -8,9 +8,9 @@ ENV PYTHONPATH=/app/src
 
 # Install dependencies
 RUN yum update && yum install -y \
-    software-properties-common \
     curl \
-    gnupg \
+    tar \
+    gzip \
     openjdk-11-jdk-amazon-corretto \
     && yum clean all
 
