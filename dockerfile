@@ -9,19 +9,18 @@ ENV PYTHONPATH=/app/src
 RUN apt-get update && apt-get install -y \
     software-properties-common \
     curl \
-    gnupg
-
-RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.list.d/bullseye.list && \
-    apt-get update && \
-    apt-get install -y openjdk-11-jdk && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Java and dependencies
-#RUN apt-get update && apt-get install -y default-jdk curl && rm -rf /var/lib/apt/lists/*
+    gnupg \
+    openjdk-11-jdk-headless \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set JAVA_HOME environment
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64
 ENV PATH=$JAVA_HOME/bin:$PATH
+
+# RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.list.d/bullseye.list && \
+#     apt-get update && \
+#     apt-get install -y openjdk-11-jdk && \
+#     rm -rf /var/lib/apt/lists/*
 
 # Install Spark
 RUN curl -O https://archive.apache.org/dist/spark/spark-3.5.2/spark-3.5.2-bin-hadoop3.tgz \
@@ -53,10 +52,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./src /app/src
 COPY ./templates /app/templates
 COPY ./static /app/static
-#COPY ./data /app/data
 COPY requirements.txt /app/
 
-RUN export $(cat .env | xargs)
+#RUN export $(cat .env | xargs)
 
 
 
