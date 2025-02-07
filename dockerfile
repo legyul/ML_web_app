@@ -7,12 +7,12 @@ WORKDIR /app
 ENV PYTHONPATH=/app/src
 
 # Install dependencies
-RUN yum update && yum install -y \
+RUN apt-get update && apt-get install -y \
     curl \
     tar \
     gzip \
-    openjdk-11-jdk-amazon-corretto \
-    && yum clean all
+    openjdk-11-jdk-headless \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set JAVA_HOME environment
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
