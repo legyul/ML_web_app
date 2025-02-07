@@ -6,39 +6,37 @@ WORKDIR /app
 
 ENV PYTHONPATH=/app/src
 
+ENV DEBIAN_FRONTEND=noninteractive
+ENV JAVA_HOME=/usr/lib/jvm/java-11-amazon-corretto
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+ENV SPARK_HOME=/usr/local/spark
+ENV PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
+ENV PYSPARK_PYTHON=python3
+ENV PYSPARK_DRIVER_PYTHON=python3
+
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     tar \
     gzip \
+    software-properties-common \
+    && add-apt-repository -y ppa:openjdk-r/ppa \
+    && apt-get update && apt-get install -y openjdk-11-jdk \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install OpenJDK 11 (Adoptium Temurin JDK)
-RUN mkdir -p /usr/lib/jvm && \
-    cd /usr/lib/jvm && \
-    curl -L -o openjdk11.tar.gz https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.20%2B8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.20_8.tar.gz && \
-    tar -xvzf openjdk11.tar.gz && \
-    mv jdk-11.0.20+8 java-11-openjdk-amd64 && \
-    rm openjdk11.tar.gz
-
-# Set Java environment variables
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-ENV PATH="${JAVA_HOME}/bin:${PATH}"
+# RUN mkdir -p /usr/lib/jvm && \
+#     cd /usr/lib/jvm && \
+#     curl -L -o openjdk11.tar.gz https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.20%2B8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.20_8.tar.gz && \
+#     tar -xvzf openjdk11.tar.gz && \
+#     mv jdk-11.0.20+8 java-11-openjdk-amd64 && \
+#     rm openjdk11.tar.gz
 
 # Install Spark
 RUN curl -O https://archive.apache.org/dist/spark/spark-3.5.2/spark-3.5.2-bin-hadoop3.tgz \
     && tar -xvzf spark-3.5.2-bin-hadoop3.tgz \
     && mv spark-3.5.2-bin-hadoop3 /usr/local/spark \
     && rm spark-3.5.2-bin-hadoop3.tgz
-
-
-# Set Spark environment variables
-ENV SPARK_HOME=/usr/local/spark
-ENV PATH="${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
-ENV PYSPARK_PYTHON=python3
-ENV PYSPARK_DRIVER_PYTHON=python3
-
-RUN echo "export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> ~/.bashrc
 
 # Install requirement files
 COPY requirements.txt .
