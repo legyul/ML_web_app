@@ -6,12 +6,17 @@ WORKDIR /app
 
 ENV PYTHONPATH=/app/src
 
+# Install dependencies
 RUN apt-get update && apt-get install -y \
     software-properties-common \
     curl \
     gnupg \
-    openjdk-11-jdk-headless \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl -O https://download.java.net/openjdk/jdk11/ri/openjdk-11+28_linux-aarch64_bin.tar.gz \
+    && mkdir -p /usr/lib/jvm/java-11-openjdk-arm64 \
+    && tar -xvzf openjdk-11+28_linux-aarch64_bin.tar.gz -C /usr/lib/jvm/java-11-openjdk-arm64 --strip-components=1 \
+    && rm openjdk-11+28_linux-aarch64_bin.tar.gz
 
 # Set JAVA_HOME environment
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64
