@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     tar \
     gzip \
+    openjdk-11-jdk \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install OpenJDK 11 (Adoptium Temurin JDK)
