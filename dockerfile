@@ -11,14 +11,15 @@ RUN apt-get update && apt-get install -y \
     curl \
     tar \
     gzip \
-    default-jdk \
     && rm -rf /var/lib/apt/lists/*
 
 # Download and install OpenJDK 11 (Adoptium Temurin JDK)
-# RUN curl -L -o jdk11.tar.gz https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.22+7/OpenJDK11U-jdk_x64_linux_hotspot_11.0.22_7.tar.gz \
-#     && mkdir -p /usr/lib/jvm/java-11-openjdk-amd64 \
-#     && tar -xvzf jdk11.tar.gz -C /usr/lib/jvm/java-11-openjdk-amd64 --strip-components=1 \
-#     && rm jdk11.tar.gz
+RUN mkdir -p /usr/lib/jvm && \
+    cd /usr/lib/jvm && \
+    curl -L -o openjdk11.tar.gz https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.20%2B8/OpenJDK11U-jdk_x64_linux_hotspot_11.0.20_8.tar.gz && \
+    tar -xvzf openjdk11.tar.gz && \
+    mv jdk-11.0.20+8 java-11-openjdk-amd64 && \
+    rm openjdk11.tar.gz
 
 # Set Java environment variables
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
@@ -30,16 +31,7 @@ RUN curl -O https://archive.apache.org/dist/spark/spark-3.5.2/spark-3.5.2-bin-ha
     && mv spark-3.5.2-bin-hadoop3 /usr/local/spark \
     && rm spark-3.5.2-bin-hadoop3.tgz
 
-# Upgrade pip and install necessary packages
-#RUN pip install --no-cache-dir --upgrade pip setuptools
 
-# Install Spark
-# ENV SPARK_VERSION=3.3.0
-# RUN wget -qO - "https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz" | tar -xz -C /usr/local/ && \
-#     mv /usr/local/spark-${SPARK_VERSION}-bin-hadoop3 /usr/local/spark
-
-
-# Set Spark environment variables for PySpark
 # Set Spark environment variables
 ENV SPARK_HOME=/usr/local/spark
 ENV PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
