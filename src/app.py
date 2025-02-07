@@ -95,8 +95,8 @@ def upload_file():
         # Use the existing function to upload the file directly to S3
         s3_file_path = f"uploaded/{file.filename}"
 
-        # Call the upload function with the file, S3 bucket name, and the target file path
-        upload_user_file_to_s3(file, S3_BUCKET_NAME, s3_file_path)
+        # Call the upload function with the file, S3 bucket name, and the target file
+        upload_user_file_to_s3(file, S3_BUCKET_NAME, file.filename)
 
         print(f"File {file.filename} uploaded to S3 bucket {S3_BUCKET_NAME}")
         
