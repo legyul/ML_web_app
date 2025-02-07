@@ -11,15 +11,11 @@ RUN apt-get update && apt-get install -y \
     software-properties-common \
     curl \
     gnupg \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN echo "deb http://deb.debian.org/debian bullseye main" > /etc/apt/sources.list.d/bullseye.list \
-    && apt-get update \
-    && apt-get install -y openjdk-11-jdk \
+    openjdk-11-jdk-headless \
     && rm -rf /var/lib/apt/lists/*
 
 # Set JAVA_HOME environment
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-arm64
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV PATH=$JAVA_HOME/bin:$PATH
 
 
@@ -69,4 +65,4 @@ COPY requirements.txt /app/
 # EXPOSE 80
 
 # 7. Run Flask server
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "--timeout", "300", "--worker-class", "gthread", "--threads", "4", "src.app:app"]
+CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:5000", "--timeout", "300", "--worker-class", "gthread", "--threads", "2", "src.app:app"]
