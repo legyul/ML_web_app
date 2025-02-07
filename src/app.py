@@ -74,18 +74,22 @@ def classification():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     global logger, upload_log_to_s3
+    print("[DEBUG] Implementing upload_file()")
     if 'file' not in request.files:
+        print("[ERROR] No file")
         return redirect(request.url)
     
     file = request.files['file']
     task = request.form.get('task')
     
     if file.filename == '':
+        print("[ERROR] No file name")
         return redirect(request.url)
     
     if file:
         global filename
         filename = file.filename
+        print(f"[DEBUG] File name to upload: {filename}")
 
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
@@ -342,7 +346,7 @@ def upload_user_file_to_s3(file, bucket_name, file_name):
 
         file_size = len(file_buffer.getvalue())
         print(f"[DEBUG] File size: {file_size} bytes")
-
+        print(f"[DEBUG] Uploading {file_name} to S3 at path: uploaded/{file_name}")
         # Upload the file to S3
         s3.upload_fileobj(file_buffer, bucket_name, f'uploaded/{file_name}')#, ExtraArgs={'ACL':'public-read'})
         print(f"File {file_name} uploaded to S3 bucket {bucket_name}.")
