@@ -34,7 +34,7 @@ RUN curl -O https://archive.apache.org/dist/spark/spark-3.5.2/spark-3.5.2-bin-ha
 
 # Set Spark environment variables
 ENV SPARK_HOME=/usr/local/spark
-ENV PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
+ENV PATH="${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
 ENV PYSPARK_PYTHON=python3
 ENV PYSPARK_DRIVER_PYTHON=python3
 
