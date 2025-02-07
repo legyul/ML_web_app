@@ -11,8 +11,13 @@ RUN apt-get update && apt-get install -y \
     curl \
     tar \
     gzip \
-    openjdk-11-jdk-headless \
     && rm -rf /var/lib/apt/lists/*
+
+# Manually install OpenJDK 11
+RUN curl -O https://download.oracle.com/java/11/latest/jdk-11_linux-x64_bin.tar.gz \
+    && mkdir -p /usr/lib/jvm/java-11-openjdk-amd64 \
+    && tar -xvzf jdk-11_linux-x64_bin.tar.gz -C /usr/lib/jvm/java-11-openjdk-amd64 --strip-components=1 \
+    && rm jdk-11_linux-x64_bin.tar.gz
 
 # Set JAVA_HOME environment
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
