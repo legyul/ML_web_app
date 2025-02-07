@@ -18,13 +18,16 @@ RUN apt-get update && apt-get install -y \
     curl \
     tar \
     gzip \
-    software-properties-common
+    software-properties-common \
+    gnupg \
+    ca-certificates
 
 # Download and install OpenJDK 11 (Adoptium Temurin JDK)
-RUN curl -L -o jdk11.tar.gz https://github.com/adoptium/temurin11-binaries/releases/latest/download/OpenJDK11U-jdk_x64_linux_hotspot.tar.gz \
-    && mkdir -p /usr/lib/jvm/java-11-openjdk-amd64 \
-    && tar -xvzf jdk11.tar.gz -C /usr/lib/jvm/java-11-openjdk-amd64 --strip-components=1 \
-    && rm jdk11.tar.gz
+RUN mkdir -p /usr/lib/jvm && \
+    curl -fsSL https://download.java.net/openjdk/jdk11/ri/openjdk-11+28_linux-x64_bin.tar.gz -o jdk11.tar.gz && \
+    tar -xzf jdk11.tar.gz -C /usr/lib/jvm && \
+    mv /usr/lib/jvm/jdk-11 /usr/lib/jvm/java-11-openjdk-amd64 && \
+    rm jdk11.tar.gz
 
 # Install Spark
 RUN curl -O https://archive.apache.org/dist/spark/spark-3.5.2/spark-3.5.2-bin-hadoop3.tgz \
