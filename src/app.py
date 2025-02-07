@@ -344,7 +344,7 @@ def upload_user_file_to_s3(file, bucket_name, file_name):
         print(f"[DEBUG] File size: {file_size} bytes")
 
         # Upload the file to S3
-        s3.upload_fileobj(file_buffer, bucket_name, f'uploads/{file_name}')#, ExtraArgs={'ACL':'public-read'})
+        s3.upload_fileobj(file_buffer, bucket_name, f'uploaded/{file_name}')#, ExtraArgs={'ACL':'public-read'})
         print(f"File {file_name} uploaded to S3 bucket {bucket_name}.")
         return f'File {file_name} uploaded successfully to S3.'
 
