@@ -34,9 +34,9 @@ if SparkContext._active_spark_context:
 
 sc = SparkContext.getOrCreate(conf=conf)
 
-#print("Template directory: ", os.path.abspath('./templates'))
+S3_REGION = "us-east-2"
 # S3 Client configuration
-s3 = boto3.client('s3')
+s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
 
 S3_BUCKET_NAME = "ml-platform-service"
 
