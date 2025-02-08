@@ -123,7 +123,7 @@ def delete_file_from_s3(bucket_name, file_key):
 
 @app.route('/process_clustering/<filename>', methods=['GET', 'POST'])
 def process_clustering(filename):
-    s3_file_path = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/uploaded/{filename}"
+    s3_file_path = f"uploaded/{filename}"
     
     if request.method == 'POST':
         threshold = float(request.form.get('threshold'))
@@ -186,7 +186,7 @@ def start_classification(filename):
         return jsonify({"error": "Missing filename or model choice"}), 400
 
     
-    s3_file_path = f"https://{S3_BUCKET_NAME}.s3.amazonaws.com/uploaded/{filename}"
+    s3_file_path = f"uploaded/{filename}"
     progress_status = "Training started..."
 
     try:
