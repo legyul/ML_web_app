@@ -40,8 +40,6 @@
             const filename = "{{ filename }}";
             const model_choice = "{{ model_choice }}";
 
-            let resultUrls = {};
-
             // Message list
             const messages = [
                 "Training the best model for your data...\n\nMeanwhile, I'm also training myself for my next AI/ML role! 😃",
@@ -76,20 +74,20 @@
                 return response.json();
             })
             .then(data => {
-                console.log("\n=== API Response ===");
-                console.log(data);
+                console.log("\n=== API Response ===", data);
 
                 if (data.error) {
                     document.getElementById("loading").innerHTML = "Error: " + data.error;
                 } else {
-                    resultUrls = {
-                            pdf_url: data.pdf_url,
-                            model_url: data.model_url,
-                            log_url: data.log_url
-                        };
+                    console.log("📌 PDF URL:", data.pdf_url);
+                    console.log("📌 Model URL:", data.model_url);
+                    console.log("📌 Log URL:", data.log_url);
 
-                    // Generate button
                     document.getElementById("view-results").style.display = "block";
+
+                    sessionStorage.setItem('pdf_url', data.pdf_url);
+                    sessionStorage.setItem('model_url', data.model_url);
+                    sessionStorage.setItem('log_url', data.log_url);
                 }
             })
             .catch(error => {
@@ -112,15 +110,19 @@
         }
 
         function goToResults() {
-            if (!resultUrls.pdf_url || !resultUrls.model_url || !resultUrls.log_url) {
-                    alert("Results are not available yet. Please wait.");
-                    return;
-                }
+            console.log("Navigating to classification result page...");
 
-            // 올바른 URL로 이동
-            window.location.href = `/classification_result?pdf_url=${encodeURIComponent(resultUrls.pdf_url)}&model_url=${encodeURIComponent(resultUrls.model_url)}&log_url=${encodeURIComponent(resultUrls.log_url)}`;
+            const pdfUrl = sessionStorage.getItem('pdf_url');
+            const modelUrl = sessionStorage.getItem('model_url');
+            const logUrl = sessionStorage.getItem('log_url');
 
-                
+            if (!pdfUrl || !modelUrl || !logUrl) {
+                alert("Results are not available yet. Please wait.");
+                return;
+            }
+
+            window.location.href = `/classification_result?pdf_url=${encodeURIComponent(pdfUrl)}&model_url=${encodeURIComponent(modelUrl)}&log_url=${encodeURIComponent(logUrl)}`;
+
             }
 
         startClassification();                  // Start classification using AJAX
