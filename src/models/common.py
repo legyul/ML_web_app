@@ -21,15 +21,9 @@ os.environ["SPARK_HOME"] = '/usr/local/spark'
 
 spark = SparkSession.builder.appName("DataPreprocessing").getOrCreate()
 
-S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
-AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+S3_BUCKET_NAME = "ml-platform-service"
 
-s3 = boto3.client(
-    's3',
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY
-)
+s3 = boto3.client('s3')
 
 current_dataset_filename = None
 
@@ -91,11 +85,6 @@ def load_file(file_key):
             raise FileNotFoundError(f"File '{file_name}' does not exist in S3 bucket '{S3_BUCKET_NAME}'")
         else:
             raise e
-    
-    # Download the file to a temporary directory
-    # temp_file_path = f"/tmp/{file_name}"
-    # with open(temp_file_path, 'wb') as f:
-    #     s3.download_fileobj(S3_BUCKET_NAME, file_path, f)
     
     # Determine file extension
     file_extension = file_name.split('.')[-1]
