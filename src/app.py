@@ -221,16 +221,12 @@ def start_classification(filename):
         upload_log_to_s3()
 
         # Generate Download URL
-        model_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_model_and_info.zip")
-        pdf_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_Report.pdf")
-        log_url = generate_presigned_url(S3_BUCKET_NAME, f"logs/{filename}_log.log")
+        session['model_url'] = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_model_and_info.zip")
+        session['pdf_url'] = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_Report.pdf")
+        session['log_url'] = generate_presigned_url(S3_BUCKET_NAME, f"logs/{filename}_log.log")
 
         progress_status = "Classification completed!"
-        return jsonify({
-            "pdf_url": pdf_url,
-            "model_url": model_url,
-            "log_url": log_url,
-            })
+        return jsonify({"message": "Classification completed. You can now view the results."})
     
     except Exception as e:
         progress_status = "Error occurred!"
@@ -238,30 +234,15 @@ def start_classification(filename):
 
 progress_status = "Waiting..."
 
-@app.route('/classification_result', methods=['GET', 'POST'])
+@app.route('/classification_result')
 def classification_result():
-    if request.method == 'POST':
-        pdf_url = request.args.get('pdf_url')
-        model_url = request.args.get('model_url')
-        log_url = request.args.get('log_url')
-
-        if not pdf_url or not model_url or not log_url:
-            return "Missing parameters", 400
-        
-        return render_template(
-            'classification_result.html',
-            pdf_url=pdf_url,
-            model_url=model_url,
-            log_url=log_url
-        )
-    
-    pdf_url = request.args.get('pdf_url')
-    model_url = request.args.get('model_url')
-    log_url = request.args.get('log_url')
+    pdf_url = session.get('pdf_url')
+    model_url = session.get('model_url')
+    log_url = session.get('log_url')
 
     if not pdf_url or not model_url or not log_url:
         return "Missing parameters", 400
-
+    
     return render_template(
         'classification_result.html',
         pdf_url=pdf_url,
