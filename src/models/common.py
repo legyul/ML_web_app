@@ -5,7 +5,7 @@ from sklearn.impute import SimpleImputer
 import re
 from dotenv import load_dotenv
 import os
-import logging
+from logger_utils import logger
 import boto3
 from botocore.exceptions import ClientError
 from pyspark.sql import SparkSession
@@ -25,55 +25,17 @@ S3_BUCKET_NAME = "ml-platform-service"
 
 s3 = boto3.client('s3')
 
-current_dataset_filename = None
-
-def set_dataset_filename(filename):
-    global current_dataset_filename
-    current_dataset_filename = filename
-
-
-def setup_global_logger(log_level=logging.DEBUG):
-    '''
-    Setup a global logger with the specified log file name and level
-
-    Parameters:
-    - log_level (int): Logging level (e.g., DEBUG, INFO)
-
-    Returns
-    - logger: Configured logger
-    '''
-    log_dir = 'result/logs'
-    os.makedirs(log_dir, exist_ok=True)
-
-    # Create log file path using the dataset filename
-    if current_dataset_filename:
-        log_filename = os.path.join(log_dir, f"{os.path.splitext(current_dataset_filename)[0]}_log.log")
-    else:
-        log_filename = os.path.join(log_dir, "default_log.log")
-
-    logger = logging.getLogger(f'logger_{current_dataset_filename if current_dataset_filename else "default"}')
-    logger.setLevel(log_level)
-
-    # Set up file handler for logging to the file
-    handler = logging.FileHandler(log_filename)
-    handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-    logger.addHandler(handler)
-
-    return logger
-
 # Load dataset file
 def load_file(file_key):
     if not file_key:
         raise ValueError("Error: file_key is None. Check the function call.")
-    print(f"\nFile key: {file_key}\n")
+    
     file_name = file_key.split('/')[-1]
     file_path = f"uploaded/{file_name}"
     s3_path = f"s3://{S3_BUCKET_NAME}/{file_path}"
 
     if not file_name or not file_path:
         raise ValueError("Error: file_path is not generated correctly.")
-    
-    print(f"\nChecking file in S3: {s3_path}")
     
     # Check if the file exists in S3 bucket
     try:
@@ -278,4 +240,3 @@ class pandas_processing:
 
         data[numeric_cols] = scaler.fit_transform(data[numeric_cols])
         return data
-

@@ -24,6 +24,8 @@
             overflow: auto;
             max-height: 500px;
             white-space: pre-wrap;
+            text-align: left;
+            font-family: monospace;
         }
         .download-button {
             display: block;
@@ -39,6 +41,10 @@
         .download-button:hover {
             background-color: #0056b3;
         }
+        .footer-container {
+            margin-top: 50px;
+            text-align: center;
+        }
         </style>
         <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     </head>
@@ -49,8 +55,11 @@
                 {{ line }}
             {% endfor %}
         </pre>
-        <a href="{{ url_for('download_log', filename=filename) }}" class="button">Download Log</a>
+        <a href="{{ url_for('download_log', filename=filename) }}" class="download-button">Download Log</a>
 
-        {% include 'footer.html' %}
+        <div class="footer-container">
+            {% include 'footer.html' %}
+        </div>
+
     </body>
 </html>

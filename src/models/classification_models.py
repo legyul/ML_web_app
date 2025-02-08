@@ -547,13 +547,6 @@ class numeric:
             if best_gain == -float('inf'):
                 self.value = np.bincount(y).argmax() if self.mode == 'classification' else np.mean(y)
                 return
-            
-            # left_mask, right_mask = X[best_feature] <= best_threshold, X[best_feature] > best_threshold
-            # self.feature, self.threshold = best_feature, best_threshold
-            # self.left, self.right = numeric.DecisionTree(mode=self.mode, num_class=self.num_class), numeric.DecisionTree(mode=self.mode, num_class=self.num_class)
-            # self.left.fit(X[left_mask], y[left_mask])
-            # self.right.fit(X[right_mask], y[right_mask])
-
 
             # Stopping condition: All labels are the same
             if len(unique_classes) == 1:
@@ -657,9 +650,6 @@ class numeric:
             - float/int: Predicted value
             '''
             predictions = np.array([self._predict_single(row) for _, row in X.iterrows()])
-            # for _, row in X.iterrows():
-            #     pred = self._predict_single(row)
-            #     predictions.append(round(pred))
             
             return predictions
 
@@ -802,23 +792,7 @@ class numeric:
                     predictions = forest.predict(X_val)
                     score = accuracy_score(y_val, predictions) if self.mode == 'classification' else r2_score(y_val, predictions)
                     return score, n_trees, max_depth
-                    # self.n_trees = n_trees
-                    # self.max_depth = 25
-                    # self.trees = []
-
-                    # for _ in range(self.n_trees):
-                    #     tree = numeric.DecisionTree(mode=self.mode, num_class=self.num_class)
-                    #     tree.fit(X_train, y_train)
-                    #     self.trees.append(tree)
-                    
-                    # predictions = self.predict(X_val)
-
-                    # if self.mode == 'classification':
-                    #     score = accuracy_score(y_val, predictions)
-                    # else:
-                    #     score = np.corrcoef(y_val, predictions)[0, 1] ** 2
-                
-                    # return score, n_trees, max_depth
+            
                 except Exception as e:
                     logger.error(f"Error in train_and_evaluate with n_trees={n_trees} and max_depth={max_depth}: {e}")
                     return None, n_trees, max_depth

@@ -25,15 +25,15 @@ def eliminate_high_correlation(data, threshold=0.8):
     
     elif isinstance(data, spark.sql.dataframe.DataFrame):
         columns = data.columns
-        to_drop = set()  # 제거할 컬럼을 저장할 집합
+        to_drop = set()  # Set the stored the eliminated columns
 
-        # 각 컬럼 간 상관 관계 계산
+        # Calculate the correlation between each column
         for i in range(len(columns)):
             for j in range(i + 1, len(columns)):
                 col1, col2 = columns[i], columns[j]
                 corr_value = data.stat.corr(col1, col2)
                 if corr_value > threshold:
-                    # 높은 상관 관계를 가진 컬럼을 제거할 목록에 추가
+                    # Add highly correlated columns to the list to be removed
                     to_drop.add(col2)
 
         data_cleaned = data.drop(*to_drop)
@@ -131,7 +131,6 @@ def elbow_plot(elbow_point, wcss, file_name, algorithm, threshold):
     plt.xlabel('Number of clusters')
     plt.ylabel('WCSS')
     plt.title(f'{file_name}_{threshold}_Elbow Method')
-    #plt.savefig(f'./static/_img/{file_name}_{threshold}_{algorithm}_Elbow_Method.png')
 
 # Algorithm for choosing the number of clusters. 
 def choose_cluster(elbow, silhouette):
@@ -245,6 +244,3 @@ class silhouetteAnalyze:
         plt.xlabel('Number of clusters')
         plt.ylabel('Silhouette Score')
         plt.title(f'{file_name}_{threshold}_Silhouette Method')
-        #plt.savefig(f'./static/_img/{file_name}_{threshold}_{algorithm}_Silhouette_Method.png')
-
-
