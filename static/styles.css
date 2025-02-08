@@ -141,7 +141,7 @@ input, select {
 
 pre {
     width: 80%;
-    max-width: 800px;
+    margin: 0 auto;
     background: white;
     padding: 15px;
     border-radius: 5px;
@@ -150,9 +150,17 @@ pre {
     max-height: 500px;
     white-space: pre-wrap;
     text-align: left;
-    line-height: 1.5;
-    display: block;
-    padding-left: 0;
+    font-family: monospace;
+    /* width: 80%;
+    background: white;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    overflow: auto;
+    max-height: 500px;
+    white-space: pre-wrap;
+    text-align: left;
+    font-family: monospace; */
 }
 
 .container {
