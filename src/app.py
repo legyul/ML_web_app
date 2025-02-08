@@ -370,7 +370,7 @@ def upload_user_file_to_s3(file, bucket_name, file_name):
         print(f"[DEBUG] File size: {file_size} bytes")
         print(f"[DEBUG] Uploading {file_name} to S3 at path: uploaded/{file_name}")
         # Upload the file to S3
-        s3.upload_fileobj(file_buffer, bucket_name, f'uploaded/{file_name}')#, ExtraArgs={'ACL':'public-read'})
+        s3.upload_fileobj(file_buffer, bucket_name, f'uploaded/{file_name}')
         print(f"File {file_name} uploaded to S3 bucket {bucket_name}.")
         return f'File {file_name} uploaded successfully to S3.'
 
@@ -381,8 +381,6 @@ def upload_user_file_to_s3(file, bucket_name, file_name):
 # Generate presigned URL to able download files
 def generate_presigned_url(bucket_name, s3_key, expiration=36000):
     try:
-        print(f"\n\nGenerating presigned URL for s3 key: {s3_key}")
-        result_path = 'result/'
         response = s3.generate_presigned_url('get_object',
                                              Params={'Bucket': bucket_name, 'Key': s3_key},
                                              ExpiresIn=expiration)
@@ -393,4 +391,4 @@ def generate_presigned_url(bucket_name, s3_key, expiration=36000):
         return None
 
 if __name__ == '__main__':
-    app.run(debug=True)#, host='0.0.0.0', port=5000)
+    app.run(debug=True)
