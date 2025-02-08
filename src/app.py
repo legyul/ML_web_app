@@ -25,6 +25,9 @@ template_dir = os.path.abspath('./templates')
 static_dir = os.path.abspath('./static')
 
 app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
+if not app.secret_key:
+    raise ValueError("FLASK_SECRET_KEY is not set! Set the environment variable before running the app.")
 
 # Setting the port that Spark UI uses
 conf = SparkConf().setAppName("DataPreprocessing").setMaster("local[*]")
