@@ -25,9 +25,9 @@
             const modelUrl = urlParams.get('model_url');
             const logUrl = urlParams.get('log_url');
 
-            consol.log("\n\n  pdfUrl:", pdfUrl);
-            consol.log("\n  modelUrl:", modelUrl);
-            consol.log("\n  logUrl:", logUrl);
+            console.log("\n\n  pdfUrl:", pdfUrl);
+            console.log("\n  modelUrl:", modelUrl);
+            console.log("\n  logUrl:", logUrl);
 
             // Set the links for the downloaded files dynamically
             document.getElementById('pdf_link').href = decodeURIComponent(pdfUrl);

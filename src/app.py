@@ -238,15 +238,30 @@ def start_classification(filename):
 
 progress_status = "Waiting..."
 
-@app.route('/classification_result')
+@app.route('/classification_result', methods=['GET', 'POST'])
 def classification_result():
+    if request.method == 'POST':
+        pdf_url = request.args.get('pdf_url')
+        model_url = request.args.get('model_url')
+        log_url = request.args.get('log_url')
+
+        if not pdf_url or not model_url or not log_url:
+            return "Missing parameters", 400
+        
+        return render_template(
+            'classification_result.html',
+            pdf_url=pdf_url,
+            model_url=model_url,
+            log_url=log_url
+        )
+    
     pdf_url = request.args.get('pdf_url')
     model_url = request.args.get('model_url')
     log_url = request.args.get('log_url')
 
     if not pdf_url or not model_url or not log_url:
         return "Missing parameters", 400
-    
+
     return render_template(
         'classification_result.html',
         pdf_url=pdf_url,

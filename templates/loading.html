@@ -13,14 +13,32 @@
                 font-size: 24px;
                 text-align: center;
             }
+            #view-results {
+                display: none;
+                margin-top: 20px;
+                padding: 10px 15px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                font-size: 18px;
+                cursor: pointer;
+            }
+            #view-results:hover {
+                background-color: #45a049;
+            }
         </style>
     </head>
     <body>
         <div id="loading">Processing your classification... Please wait.</div>
+        <button id="view-results" onclick="goToResults()">View Results</button>
 
         <script>
             const filename = "{{ filename }}";
             const model_choice = "{{ model_choice }}";
+            let pdf_url = "";
+            let model_url = "";
+            let log_url = "";
 
             // Message list
             const messages = [
@@ -56,7 +74,13 @@
                 if (data.error) {
                     document.getElementById("loading").innerHTML = "Error: " + data.error;
                 } else {
-                    window.location.href = `/classification_result?pdf_url=${encodeURIComponent(data.pdf_url)}&model_url=${encodeURIComponent(data.model_url)}&log_url=${encodeURIComponent(data.log_url)}`;
+                    pdf_url = encodeURIComponent(data.pdf_url);
+                        model_url = encodeURIComponent(data.model_url);
+                        log_url = encodeURIComponent(data.log_url);
+
+                        // "View Results" button activate
+                        document.getElementById("view-results").style.display = "block";
+                        document.getElementById("loading").innerText = "Processing complete! Click 'View Results' to see the outcome.";
                 }
             })
             .catch(error => {
@@ -77,6 +101,12 @@
                     }, 1500)
                 });
         }
+
+        function goToResults() {
+                if (pdf_url && model_url && log_url) {
+                    window.location.href = `/classification_result?pdf_url=${pdf_url}&model_url=${model_url}&log_url=${log_url}`;
+                }
+            }
 
         startClassification();                  // Start classification using AJAX
         setInterval(updateStatus, 5000);        // Update the status every 1 second
