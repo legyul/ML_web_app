@@ -58,7 +58,14 @@ swagger_ui_blueprint = get_swaggerui_blueprint(
 
 app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 
-current_filename = None
+logger, upload_log_to_s3 = None, None
+
+@app.before_request
+def initialize_logger():
+    global logger, upload_log_to_s3
+    if logger is None:  
+        print("[INFO] Logger was None. Initializing now...")
+        logger, upload_log_to_s3 = setup_global_logger(s3, bucket_name=S3_BUCKET_NAME)
 
 @app.route('/')
 def home():
@@ -92,10 +99,12 @@ def upload_file():
         current_filename = filename
         print(f"[DEBUG] File name to upload: {filename}")
 
-        if logger and hasattr(logger, "log_filename"):
-            logger.log_filename = filename
-        else:
+        if logger is None:
+            print("[INFO] Logger is None. Initializing...")
             logger, upload_log_to_s3 = setup_global_logger(s3, bucket_name=S3_BUCKET_NAME, log_filename=filename)
+        else:
+            print("[INFO] Logger exists. Updating filename.")
+            logger.log_filename = filename
 
 
         # Use the existing function to upload the file directly to S3
