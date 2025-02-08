@@ -152,8 +152,6 @@ pre {
     text-align: left;
     line-height: 1.5;
     display: block;
-    flex-direction: column;
-    align-items: flex-start;
     padding-left: 0;
 }
 
