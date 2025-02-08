@@ -2,7 +2,7 @@ import os
 import sys
 from models import run_cluster, run_classification #, common
 from logger_utils import setup_global_logger
-from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify, session, Response
 from werkzeug.utils import secure_filename
 import boto3
 from dotenv import load_dotenv
@@ -282,24 +282,35 @@ def view_log():
         response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=log_s3_key)
         log_content = response['Body'].read().decode('utf-8')
 
+        print("\n[DEBUG] Successfully retrieved log content!")
         return render_template('view_log.html', log_content=log_content.splitlines(), filename=filename)
     
+    except s3.exceptions.NoSuchKey:
+        print(f"[ERROR] Log file '{log_s3_key}' not found in S3.")  # 디버깅 로그
+        return "Log file not found.", 404
+
     except Exception as e:
-        flash(f"Error loading log file: {str(e)}")
-        return redirect(url_for("home"))
+        print(f"[ERROR] Error retrieving log file: {str(e)}")  # 디버깅 로그
+        return f"Error retrieving log file: {str(e)}", 500
 
 @app.route('/download_log/<filename>')
 def download_log(filename):
     log_s3_key = f"logs/{filename}"
 
     try:
-        response = s3.generate_presigned_url('get_object', Params={'Bucket': S3_BUCKET_NAME, 'Key': log_s3_key}, ExpiresIn=3600)
-        return redirect(response)
-
+        response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=log_s3_key)
+        log_content = response['Body'].read()
+        
+        # 파일 다운로드 응답 설정
+        return Response(
+            log_content,
+            mimetype="text/plain",
+            headers={"Content-Disposition": f"attachment;filename={filename}"}
+        )
     except s3.exceptions.NoSuchKey:
         return "Log file not found.", 404
     except Exception as e:
-        return f"Error generating log download link: {str(e)}", 500
+        return f"Error retrieving log file: {str(e)}", 500
 
 # Upload generated files to S3 bucket
 def upload_to_s3_direct(bucket_name, files):
