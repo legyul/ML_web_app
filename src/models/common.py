@@ -77,8 +77,9 @@ def load_file(file_key):
 
     if not file_name or not file_path:
         raise ValueError("Error: file_path is not generated correctly.")
-    print(f"\nChecking file in S3: {file_path}")
     
+    print(f"\nChecking file in S3: {file_path}")
+    print(f"\nChecking file name in S3: {file_name}")
     # Check if the file exists in S3 bucket
     try:
         response = s3.head_object(Bucket=S3_BUCKET_NAME, Key=file_path)
