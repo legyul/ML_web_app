@@ -113,9 +113,9 @@ def run_classification(file_key, model_choice):
 
         
         zip_buffer.seek(0)
-        print('\n\nDone!!!!!\n\n')
 
         return pdf_buffer, zip_buffer
+    
     except Exception as e:
         print(f"Error during {file_name}: {e}")
         return None, None

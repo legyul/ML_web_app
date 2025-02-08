@@ -45,7 +45,7 @@
     <body>
         <h2>Log File: {{ filename }}</h2>
         
-        <pre id="log-container">
+        <pre>
             {% for line in log_content %}
             {{ line }}
             {% endfor %}
@@ -60,26 +60,28 @@
         <script>
             // Log Time Conversion (UTC → Local Time Auto Conversion)
             document.addEventListener("DOMContentLoaded", function() {
-                let logContentElement = document.getElementById("log-content");
-                let logLines = logContentElement.innerText.split("\n");
+                let logElements = document.querySelectorAll("pre");
 
-                let convertedLogs = logLines.map(line => {
-                    let utcRegex = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC/;
-                    let match = line.match(utcRegex);
+                logElements.forEach(logElement => {
+                    let logLines = logElement.innerText.split("\n");
 
-                    if (match) {
-                        let utcTimeString = match[0].replace(" UTC", "");
-                        let utcDate = new Date(utcTimeString + "Z"); // Enable UTC time zone to be recognized by JS
+                    let convertedLogs = logLines.map(line => {
+                        let utcRegex = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/; // UTC 시간 패턴
+                        let match = line.match(utcRegex);
 
-                        let userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                        let localTime = utcDate.toLocaleString("en-US", { timeZone: userTimezone });
+                        if (match) {
+                            let utcTimeString = match[0];
+                            let utcDate = new Date(utcTimeString + " UTC"); // ✅ **JS에서 UTC로 해석**
+                            let userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                            let localTime = utcDate.toLocaleString("en-US", { timeZone: userTimezone });
 
-                        return line.replace(utcRegex, localTime + " (" + userTimezone + ")");
-                    }
-                    return line;
+                            return line.replace(utcRegex, localTime + " (" + userTimezone + ")");
+                        }
+                        return line;
+                    });
+
+                    logElement.innerText = convertedLogs.join("\n");
                 });
-
-                logContentElement.innerText = convertedLogs.join("\n");
             });
         </script>
 
