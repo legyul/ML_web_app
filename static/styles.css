@@ -143,6 +143,13 @@ pre {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    padding-left: 0;
+}
+
+pre code {
+    display: block;
+    text-align: left;
+    
 }
 
 .container {
