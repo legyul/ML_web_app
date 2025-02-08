@@ -30,10 +30,12 @@ def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_
     def upload_log_to_s3():
         if s3:
             log_buffer.seek(0)
-            log_content = log_buffer.getvalue().strip()
+            log_buffer.flush()
+            
+            log_content = log_buffer.getvalue()
             print(f"\n[DEBUG] Log Content Before Upload:\n{log_content}")  
 
-            if not log_content:
+            if not log_content.strip():
                 print("\n[ERROR] Log file is empty! Check log writing process!\n")
                 return
             
