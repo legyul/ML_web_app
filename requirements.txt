@@ -18,6 +18,7 @@ scipy
 joblib
 matplotlib
 seaborn
+s3fs
 
 # NLP & Text Processing
 nltk

@@ -123,14 +123,19 @@ def delete_file_from_s3(bucket_name, file_key):
 
 @app.route('/process_clustering/<filename>', methods=['GET', 'POST'])
 def process_clustering(filename):
-    s3_file_path = f"uploaded/{filename}"
-    
-    if request.method == 'POST':
-        threshold = float(request.form.get('threshold'))
-        algorithm = request.form.get('algorithm')
-        plot = request.form.get('plot')
+    try:
+        s3_file_path = f"s3://{S3_BUCKET_NAME}/uploaded/{filename}"
+        
+        if request.method == 'POST':
+            threshold = float(request.form.get('threshold'))
+            algorithm = request.form.get('algorithm')
+            plot = request.form.get('plot')
 
-        try:
+            if not threshold or not algorithm or not plot:
+                raise ValueError("Missing required parameters.")
+            
+            threshold = float(threshold)
+
             # Implement main function and generate report and result file
             pdf_file, csv_file = run_cluster(s3_file_path, threshold, algorithm, plot)
 
@@ -153,12 +158,21 @@ def process_clustering(filename):
 
             return render_template('clustering_result.html', pdf_url=pdf_url, csv_url=csv_url)
         
-        # If file extention is not suported, delet the file from S3 Bucket
-        except ValueError as e:
-            flash(str(e))
+    # If file extention is not suported, delet the file from S3 Bucket
+    except ValueError as e:
+        flash(f"Invalid input: {str(e)}", "error")
 
-            delete_file_from_s3(S3_BUCKET_NAME, s3_file_path)
-            return redirect(request.url)
+        delete_file_from_s3(S3_BUCKET_NAME, f"uploaded/{filename}")
+        return redirect(request.url)
+    
+    except FileNotFoundError as e:
+        flash(f"Error: {str(e)}", "error")
+        return redirect(request.url)
+    
+    except Exception as e:
+        flash("An unexpected error occurred. Pleas try again later.", "error")
+        print(f"Unexpected Error: {str(e)}")
+        return redirect(request.url)
 
     return render_template('process_clustering.html', filename=filename)
 

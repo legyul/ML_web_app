@@ -7,6 +7,15 @@
     
 </head>
 <body>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
     <h1>Clustering Parameters for {{ filename }}</h1>
     <form action="" method="post">
         <div class="form-group">

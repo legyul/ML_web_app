@@ -74,16 +74,18 @@ def load_file(file_key):
     print(f"\nFile key: {file_key}\n")
     file_name = file_key.split('/')[-1]
     file_path = f"uploaded/{file_name}"
+    s3_path = f"s3://{S3_BUCKET_NAME}/{file_path}"
 
     if not file_name or not file_path:
         raise ValueError("Error: file_path is not generated correctly.")
     
-    print(f"\nChecking file in S3: {file_path}")
-    print(f"\nChecking file name in S3: {file_name}")
+    print(f"\nChecking file in S3: {s3_path}")
+    
     # Check if the file exists in S3 bucket
     try:
-        response = s3.head_object(Bucket=S3_BUCKET_NAME, Key=file_path)
+        response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=file_path)
         file_size = response['ContentLength']
+        print(f"File exists in S3: {file_path}, size: {file_size} bytes")
     except ClientError as e:
         if e.response['Error']['Code'] == '404':
             raise FileNotFoundError(f"File '{file_name}' does not exist in S3 bucket '{S3_BUCKET_NAME}'")
@@ -91,27 +93,23 @@ def load_file(file_key):
             raise e
     
     # Download the file to a temporary directory
-    temp_file_path = f"/tmp/{file_name}"
-    with open(temp_file_path, 'wb') as f:
-        s3.download_fileobj(S3_BUCKET_NAME, file_path, f)
+    # temp_file_path = f"/tmp/{file_name}"
+    # with open(temp_file_path, 'wb') as f:
+    #     s3.download_fileobj(S3_BUCKET_NAME, file_path, f)
     
     # Determine file extension
     file_extension = file_name.split('.')[-1]
 
     max_file_size = 100 * 1024 * 1024 # 100MB
-    
-    mode = "pandas"
 
     if file_size > max_file_size:
         mode = "spark"
     
         # Read the file based on its extension with PySpark
         if file_extension == 'csv':
-            return spark.read.csv(temp_file_path), mode
-        elif file_extension == 'xlsx':
-            return pd.read_excel(temp_file_path), mode
+            return spark.read.csv(s3_path, header=True, inferSchema=True), mode
         elif file_extension == 'json':
-            return spark.read.json(temp_file_path), mode
+            return spark.read.json(s3_path), mode
         else:
             raise ValueError("Unsupported file format. Supported formats are .csv, .xlsx, and .json")
     
@@ -120,11 +118,11 @@ def load_file(file_key):
 
         # Read the file based on its extension with Pandas
         if file_extension == 'csv':
-            return pd.read_csv(temp_file_path), mode
+            return pd.read_csv(s3_path), mode
         elif file_extension == 'xlsx':
-            return pd.read_excel(temp_file_path), mode
+            return pd.read_excel(s3_path), mode
         elif file_extension == 'json':
-            return pd.read_json(temp_file_path), mode
+            return pd.read_json(s3_path), mode
         else:
             raise ValueError("Unsupported file format. Supported formats are .csv, .xlsx, and .json")
 
