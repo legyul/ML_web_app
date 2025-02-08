@@ -42,6 +42,17 @@ footer {
     box-shadow: 0 -5px 5px rgba(0, 0, 0, 0.1); /* 살짝 입체감 추가 */
 }
 
+.footer-container {
+    width: 100%;
+    text-align: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    background-color: #4CAF50;
+    padding: 10px 0;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+}
+
 footer a {
     color: #0077cc; /* 링크 텍스트 색상 */
     text-decoration: none; /* 밑줄 제거 */
@@ -140,16 +151,10 @@ pre {
     white-space: pre-wrap;
     text-align: left;
     line-height: 1.5;
-    display: flex;
+    display: block;
     flex-direction: column;
     align-items: flex-start;
     padding-left: 0;
-}
-
-pre code {
-    display: block;
-    text-align: left;
-    
 }
 
 .container {
