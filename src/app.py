@@ -279,10 +279,10 @@ def view_log():
     log_s3_key = f"logs/{filename}"
 
     try:
-        log_obj = s3.get_object(Bucket=S3_BUCKET_NAME, Key=log_s3_key)
-        log_content = log_obj['Body'].read().decode('utf-8')
+        response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=log_s3_key)
+        log_content = response['Body'].read().decode('utf-8')
 
-        return render_template("view_log.html", log_content=log_content.splitlines(), filename=filename)
+        return render_template('view_log.html', log_content=log_content.splitlines(), filename=filename)
     
     except Exception as e:
         flash(f"Error loading log file: {str(e)}")
@@ -290,8 +290,16 @@ def view_log():
 
 @app.route('/download_log/<filename>')
 def download_log(filename):
-    log_url = generate_presigned_url(S3_BUCKET_NAME, f"logs/{filename}_log.log")
-    return redirect(log_url)
+    log_s3_key = f"logs/{filename}"
+
+    try:
+        response = s3.generate_presigned_url('get_object', Params={'Bucket': S3_BUCKET_NAME, 'Key': log_s3_key}, ExpiresIn=3600)
+        return redirect(response)
+
+    except s3.exceptions.NoSuchKey:
+        return "Log file not found.", 404
+    except Exception as e:
+        return f"Error generating log download link: {str(e)}", 500
 
 # Upload generated files to S3 bucket
 def upload_to_s3_direct(bucket_name, files):

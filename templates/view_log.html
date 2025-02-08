@@ -36,7 +36,7 @@
             text-decoration: none;
             border-radius: 5px;
         }
-        .back-button:hover, .download-button:hover {
+        .download-button:hover {
             background-color: #0056b3;
         }
         </style>
@@ -44,14 +44,13 @@
     </head>
     <body>
         <h1>Log File: {{ filename }}</h1>
-        <div class="log-container">
+        <pre>
             {% for line in log_content %}
-                {{ line }}<br>
+                {{ line }}
             {% endfor %}
-        </div>
-        <a href="{{ url_for('download_log', filename=filename) }}" class="download-button">Download Log</a>
-        <a href="{{ url_for('home') }}" class="back-button">Back to Home</a>
-        
+        </pre>
+        <a href="{{ url_for('download_log', filename=filename) }}" class="button">Download Log</a>
+
         {% include 'footer.html' %}
     </body>
 </html>
