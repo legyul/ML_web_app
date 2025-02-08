@@ -147,14 +147,11 @@ def process_clustering(filename):
             # Upload the generated report and result file directly to S3
             print("\nUploading files to S3...\n")
             upload_to_s3_direct(S3_BUCKET_NAME, files_to_upload)
-            print("\nUplad function executed.\n")
 
             # Generate presigned URL
             pdf_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_report.pdf")
             csv_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_results.csv")
 
-            print(f"PDF URL: {pdf_url}")
-            print(f"CSV URL: {csv_url}")
 
             return render_template('clustering_result.html', pdf_url=pdf_url, csv_url=csv_url)
         
@@ -193,7 +190,7 @@ def process_classification(filename):
 def start_classification(filename):
     global progress_status
     data = request.json
-    #filename = data.get('filename')
+
     model_choice = data.get("model_choice")
 
     if not filename or not model_choice:
@@ -263,18 +260,15 @@ def progress():
 
 @app.route('/view_log/<filename>')
 def view_log(filename):
-    print(f"\n[DEBUG] Accessing view_log route with filename: {filename}")
     try:
-        print(f"\n[DEBUG] Accessing log file: {filename}")  # ✅ 디버깅 추가
         log_content = get_log_content_from_s3(f"logs/{filename}")
-        print(f"view log log_content:\n{log_content}")
 
         if log_content:
-            print(f"[DEBUG] Log file loaded successfully: {filename}")  # ✅ 디버깅 추가
             return render_template('view_log.html', log_content=log_content.splitlines(), filename=filename)
+        
         else:
-            print(f"[ERROR] Failed to retrieve log content: {filename}")  # ❌ 에러 로그 추가
             return "Error retrieving log content.", 500
+        
     except Exception as e:
         print(f"[ERROR] retrieving log file: {str(e)}")
         return f"Error retrieving log file: {str(e)}", 500
@@ -287,7 +281,7 @@ def download_log(filename):
         response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=log_s3_key)
         log_content = response['Body'].read()
         
-        # 파일 다운로드 응답 설정
+        # File Download Response Settings
         return Response(
             log_content,
             mimetype="text/plain",
@@ -299,21 +293,17 @@ def download_log(filename):
         return f"Error retrieving log file: {str(e)}", 500
 
 def get_log_content_from_s3(s3_key):
-    print(f"[DEBUG] Attempting to retrieve log from S3 with key: {s3_key}")  # ✅ 디버깅 추가
-
     try:
         response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
         
         log_content = response['Body'].read().decode('utf-8')
-        print(f"\n{log_content}")
-
-        print(f"[DEBUG] Successfully retrieved log content from S3")  # ✅ 성공 로그
+        
         return log_content
     except s3.exceptions.NoSuchKey:
-        print(f"[ERROR] Log file not found in S3: {s3_key}")  # ❌ 에러 로그 추가
+        print(f"[ERROR] Log file not found in S3: {s3_key}")
         return None
     except Exception as e:
-        print(f"[ERROR] Failed to read log file from S3: {str(e)}")  # ❌ 에러 로그 추가
+        print(f"[ERROR] Failed to read log file from S3: {str(e)}")
         return None
 
 # Upload generated files to S3 bucket
