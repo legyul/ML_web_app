@@ -30,7 +30,7 @@
             document.addEventListener("DOMContentLoaded", function() {
             const pdfUrl = "{{ pdf_url | safe }}";
             const modelUrl = "{{ model_url | safe }}";
-            let logUrl = "{{ log_url | safe }}";
+            const logUrl = "{{ log_url | safe }}";
 
             if (!logUrl || logUrl === "None" || logUrl === "") {
                     logUrl = null;
@@ -47,11 +47,12 @@
             if (modelUrl && modelUrl !== "None") {
                 document.getElementById("model_link").href = modelUrl;
             }
-            if (logUrl) {
-                document.getElementById("log_link").href = logUrl;
-            } else {
-                    document.getElementById("log_link").style.display = "none";
-                }
+            if (logUrl && logUrl !== "None") {
+                const logFileName = logUrl.split('/').pop();
+                console.log("📜 Extracted Log Filename:", logFileName);
+
+                document.getElementById("log_link").href = `/view_log/${logFileName}`;
+        }
         });
         </script>
     </body>

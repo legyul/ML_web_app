@@ -276,6 +276,7 @@ def progress():
 
 @app.route('/view_log/<filename>')
 def view_log(filename):
+    print(f"\n[DEBUG] Accessing view_log route with filename: {filename}")
     try:
         print(f"\n[DEBUG] Accessing log file: {filename}")  # ✅ 디버깅 추가
         log_content = get_log_content_from_s3(f"logs/{filename}")
