@@ -277,11 +277,15 @@ def progress():
 @app.route('/view_log/<filename>')
 def view_log(filename):
     try:
-        response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=f"logs/{filename}")
-        log_content = response['Body'].read().decode('utf-8')
+        print(f"\n[DEBUG] Accessing log file: {filename}")  # ✅ 디버깅 추가
+        log_content = get_log_content_from_s3(f"logs/{filename}")
 
-        return render_template('view_log.html', log_content=log_content.splitlines(), filename=filename)
-
+        if log_content:
+            print(f"[DEBUG] Log file loaded successfully: {filename}")  # ✅ 디버깅 추가
+            return render_template('view_log.html', log_content=log_content.splitlines(), filename=filename)
+        else:
+            print(f"[ERROR] Failed to retrieve log content: {filename}")  # ❌ 에러 로그 추가
+            return "Error retrieving log content.", 500
     except Exception as e:
         print(f"[ERROR] retrieving log file: {str(e)}")
         return f"Error retrieving log file: {str(e)}", 500
@@ -305,23 +309,21 @@ def download_log(filename):
     except Exception as e:
         return f"Error retrieving log file: {str(e)}", 500
 
-# def get_log_content_from_s3(filename):
-#     try:
-#         s3_key = f'logs/{filename}'
-#         print(f"Debug: Retrieving log from S3 with key: {s3_key}")
+def get_log_content_from_s3(s3_key):
+    print(f"\n[DEBUG] Fetching log content from S3: {s3_key}")  # ✅ 디버깅 추가
 
-#         response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
-#         response = response.replace("http://", "https://")
-#         log_content = response['Body'].read().decode('utf-8')
+    try:
+        response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+        log_content = response['Body'].read().decode('utf-8')
 
-#         return log_content
-
-#     except s3.exceptions.NoSuchKey:
-#         print(f"[ERROR] Log file not found in S3: {filename}")
-#         return None
-#     except Exception as e:
-#         print(f"[ERROR] Error reading log file from S3: {e}")
-#         return None
+        print(f"[DEBUG] Successfully retrieved log content from S3")  # ✅ 성공 로그
+        return log_content
+    except s3.exceptions.NoSuchKey:
+        print(f"[ERROR] Log file not found in S3: {s3_key}")  # ❌ 에러 로그 추가
+        return None
+    except Exception as e:
+        print(f"[ERROR] Failed to read log file from S3: {str(e)}")  # ❌ 에러 로그 추가
+        return None
 
 # Upload generated files to S3 bucket
 def upload_to_s3_direct(bucket_name, files):
