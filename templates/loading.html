@@ -40,6 +40,7 @@
             const filename = "{{ filename }}";
             const model_choice = "{{ model_choice }}";
 
+            let resultUrls = {};
 
             // Message list
             const messages = [
@@ -68,7 +69,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ filename: "{{ filename }}", model_choice: "{{ model_choice }}" })
+                body: JSON.stringify({ filename, model_choice })
             })
             .then(response => response.json())
             .then(data => {
@@ -78,7 +79,14 @@
                 if (data.error) {
                     document.getElementById("loading").innerHTML = "Error: " + data.error;
                 } else {
-                    document.getElementById("viewResultsButton").style.display = "block";
+                    resultUrls = {
+                            pdf_url: data.pdf_url,
+                            model_url: data.model_url,
+                            log_url: data.log_url
+                        };
+
+                    // Generate button
+                    document.getElementById("view-results").style.display = "block";
                 }
             })
             .catch(error => {
@@ -101,8 +109,14 @@
         }
 
         function goToResults() {
-                console.log("Navigating to classification result page...")
-                window.location.href = `/classification_result`;
+            if (!resultUrls.pdf_url || !resultUrls.model_url || !resultUrls.log_url) {
+                    alert("Results are not available yet. Please wait.");
+                    return;
+                }
+
+            // 올바른 URL로 이동
+            window.location.href = `/classification_result?pdf_url=${encodeURIComponent(resultUrls.pdf_url)}&model_url=${encodeURIComponent(resultUrls.model_url)}&log_url=${encodeURIComponent(resultUrls.log_url)}`;
+
                 
             }
 
