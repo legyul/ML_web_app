@@ -142,7 +142,5 @@ pre {
     margin: 10px auto;
     font-size: 14px;
     line-height: 1.5;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    display: block;
 }
