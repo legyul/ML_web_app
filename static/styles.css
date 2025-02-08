@@ -32,7 +32,7 @@ h1 {
 }
 footer {
     text-align: center;
-    padding: 20px; /* Footer 내부 여백 */
+    padding: 10px 0; /* Footer 내부 여백 */
     background-color: #4CAF50; /* 버튼 배경색과 동일 */
     color: #fff; /* 텍스트 색상 */
     border-top: 3px solid #3e8e41; /* 상단 경계선 추가 */
@@ -142,4 +142,7 @@ pre {
     margin: 10px auto;
     font-size: 14px;
     line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
 }
