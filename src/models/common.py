@@ -8,6 +8,8 @@ import os
 from logger_utils import logger
 import boto3
 from botocore.exceptions import ClientError
+import findspark
+findspark.init()
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, lower, udf
 from pyspark.ml.feature import Imputer, StringIndexer, StandardScaler as sparkStandardScaler, VectorAssembler

@@ -143,16 +143,6 @@ pre {
     width: 80%;
     margin: 0 auto;
     background: white;
-    padding: 5px;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    overflow: auto;
-    max-height: 500px;
-    white-space: pre-wrap;
-    text-align: left;
-    font-family: monospace;
-    /* width: 80%;
-    background: white;
     padding: 15px;
     border-radius: 5px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -160,7 +150,7 @@ pre {
     max-height: 500px;
     white-space: pre-wrap;
     text-align: left;
-    font-family: monospace; */
+    font-family: monospace;
 }
 
 .container {

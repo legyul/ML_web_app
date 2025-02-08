@@ -35,11 +35,7 @@
     <body>
         <div id="loading">Processing your classification... Please wait.</div>
         <button id="view-results" onclick="goToResults()">View Results</button>
-        
-        <div class="footer-container">
-            {% include 'footer.html' %}
-        </div>
-        
+
         <script>
             const filename = "{{ filename }}";
             const model_choice = "{{ model_choice }}";
