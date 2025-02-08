@@ -223,7 +223,7 @@ def start_classification(filename):
         # Generate Download URL
         model_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_model_and_info.zip")
         pdf_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_Report.pdf")
-        log_url = generate_presigned_url(S3_BUCKET_NAME, f"result/logs/{filename}_log.log")
+        log_url = generate_presigned_url(S3_BUCKET_NAME, f"logs/{filename}_log.log")
 
         progress_status = "Classification completed!"
         return jsonify({
@@ -295,7 +295,7 @@ def get_log_content_from_s3(log_url):
 
 @app.route('/download_log/<filename>')
 def download_log(filename):
-    log_url = generate_presigned_url(S3_BUCKET_NAME, f"result/logs/{filename}_log.log")
+    log_url = generate_presigned_url(S3_BUCKET_NAME, f"logs/{filename}_log.log")
     return redirect(log_url)
 
 # Upload generated files to S3 bucket
@@ -336,7 +336,7 @@ def upload_to_s3_direct(bucket_name, files):
         try:
             # Upload the file to S3
             print(f"Uploading {file_name} to S3...")
-            s3.upload_fileobj(file_buffer, bucket_name, f'result/logs/{file_name}')
+            s3.upload_fileobj(file_buffer, bucket_name, f'result/{file_name}')
             print(f"File {file_name} uploaded to S3 bucket {bucket_name}.")
         
         except Exception as e:

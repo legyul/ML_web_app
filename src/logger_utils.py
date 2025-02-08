@@ -30,7 +30,7 @@ def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_
     def upload_log_to_s3():
         if s3:
             log_buffer.seek(0)
-            s3.upload_fileobj(log_buffer, bucket_name, f'result/logs/{log_filename}_log.log')
+            s3.upload_fileobj(log_buffer, bucket_name, f'logs/{log_filename}_log.log')
             print(f"Log file {log_filename}_log uploaded to S3.")
         else:
             print(f"Log file {log_filename}_log is stored locally.")
