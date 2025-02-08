@@ -310,6 +310,7 @@ def get_log_content_from_s3(s3_key):
 
     try:
         response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+        print(f"\n{response}")
         log_content = response['Body'].read().decode('utf-8')
 
         print(f"[DEBUG] Successfully retrieved log content from S3")  # ✅ 성공 로그
