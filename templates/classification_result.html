@@ -19,21 +19,26 @@
         {% include 'footer.html' %}
 
         <script>
-            // Get URL parameters
-            // const urlParams = new URLSearchParams(window.location.search);
-            // const pdfUrl = urlParams.get('pdf_url');
-            // const modelUrl = urlParams.get('model_url');
-            // const logUrl = urlParams.get('log_url');
+            document.addEventListener("DOMContentLoaded", function() {
+            const pdfUrl = "{{ pdf_url | safe }}";
+            const modelUrl = "{{ model_url | safe }}";
+            const logUrl = "{{ log_url | safe }}";
 
-            console.log("\n=== Checking received URLs in classification_result.html ===");
-            console.log("📄 PDF URL:", "{{ pdf_url }}");
-            console.log("📦 Model URL:", "{{ model_url }}");
-            console.log("📜 Log URL:", "{{ log_url }}");
+            console.log("\n✅ Extracted URLs in JavaScript:");
+            console.log("📄 PDF URL:", pdfUrl);
+            console.log("📦 Model URL:", modelUrl);
+            console.log("📜 Log URL:", logUrl);
 
-            // Set the links for the downloaded files dynamically
-            document.getElementById("pdf_link").href = "{{ pdf_url | safe }}";
-            document.getElementById("model_link").href = "{{ model_url | safe }}";
-            document.getElementById("log_link").href = "{{ log_url | safe }}";
+            if (pdfUrl && pdfUrl !== "None") {
+                document.getElementById("pdf_link").href = pdfUrl;
+            }
+            if (modelUrl && modelUrl !== "None") {
+                document.getElementById("model_link").href = modelUrl;
+            }
+            if (logUrl && logUrl !== "None") {
+                document.getElementById("log_link").href = logUrl;
+            }
+        });
         </script>
     </body>
 </html>

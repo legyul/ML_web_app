@@ -249,9 +249,9 @@ progress_status = "Waiting..."
 
 @app.route('/classification_result')
 def classification_result():
-    pdf_url = request.args.get('pdf_url') or session.get('pdf_url')
-    model_url = request.args.get('model_url') or session.get('model_url')
-    log_url = request.args.get('log_url') or session.get('log_url')
+    pdf_url = session.get('pdf_url')
+    model_url = session.get('model_url')
+    log_url = session.get('log_url')
 
     print("\n=== Accessing classification_result ===")
     print("PDF URL:", pdf_url)
