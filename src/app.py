@@ -276,17 +276,12 @@ def progress():
 
 @app.route('/view_log/<filename>')
 def view_log():
-    log_url = request.args.get('filename')
-
-    if not log_url:
-        return "No log file URL provided", 400
-
-    print(f"\n[DEBUG] Received log_url: {log_url}")
+    print(f"\n[DEBUG] Received log_url: {filename}")
 
     try:
-        log_content = get_log_content_from_s3(log_url)
+        log_content = get_log_content_from_s3(filename)
         if log_content:
-            return render_template('view_log.html', log_content=log_content.splitlines(), filename=log_url.split('/')[-1])
+            return render_template('view_log.html', log_content=log_content.splitlines(), filename=filename)
         else:
             return "Error retrieving log content.", 500
     except Exception as e:
