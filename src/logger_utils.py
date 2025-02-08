@@ -16,8 +16,8 @@ def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_
     - logger: Configured logger
     - upload_log_to_s3: Function to upload log to S3
     '''
-    log_dir = './_logs'
-    os.makedirs(log_dir, exist_ok=True)
+    # log_dir = './_logs'
+    # os.makedirs(log_dir, exist_ok=True)
 
     log_buffer = BytesIO()
     logger = logging.getLogger('global_logger')
