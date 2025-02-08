@@ -280,7 +280,7 @@ def view_log(filename):
         log_content = get_log_content_from_s3(filename)
 
         if log_content:
-            return Response(log_content, mimetype="text/plain")
+            return render_template('view_log.html', log_content=log_content.splitlines(), filename=filename)
         else:
             return "Error retrieving log content.", 500
 
