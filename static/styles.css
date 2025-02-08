@@ -139,8 +139,8 @@ pre {
     max-height: 500px;
     white-space: pre-wrap;
     text-align: left;
-    margin: 10px auto;
     line-height: 1.5;
+    display: block;
 }
 
 .container {
@@ -149,5 +149,5 @@ pre {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding-bottom: 80px;
+    padding-bottom: 120px;
 }

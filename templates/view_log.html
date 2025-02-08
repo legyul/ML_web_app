@@ -22,15 +22,13 @@
         .download-button {
             display: block;
             width: 200px;
-            margin: 20px auto;
+            margin: 20px auto 100px auto;
             padding: 10px;
             background-color: #007bff;
             color: white;
             text-align: center;
             text-decoration: none;
             border-radius: 5px;
-            position: relative;
-            z-index: 10;
         }
         .download-button:hover {
             background-color: #0056b3;
@@ -60,7 +58,7 @@
             </pre>
 
             <a href="{{ url_for('download_log', filename=filename) }}" class="download-button">Download Log</a>
-            
+
         </div>
 
         <div class="footer-container">
