@@ -308,7 +308,7 @@ def download_log(filename):
         return f"Error retrieving log file: {str(e)}", 500
 
 def get_log_content_from_s3(log_url):
-    s3_key = log_url.split('?')[0].replace(f'https://{S3_BUCKET_NAME}.s3.amazonaws.com/', '') 
+    s3_key = f'logs/{filename}'
 
     print(f"Debug: Attempting to retrieve log from S3 with key: {s3_key}")
 
