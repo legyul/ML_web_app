@@ -1,5 +1,5 @@
 import logging
-from io import BytesIO
+import io
 import os
 
 def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_filename='default_log'):
@@ -19,7 +19,7 @@ def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_
     # log_dir = './_logs'
     # os.makedirs(log_dir, exist_ok=True)
 
-    log_buffer = BytesIO()
+    log_buffer = io.StringIO()
     logger = logging.getLogger('global_logger')
     logger.setLevel(log_level)
 
@@ -30,6 +30,13 @@ def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_
     def upload_log_to_s3():
         if s3:
             log_buffer.seek(0)
+            log_content = log_buffer.getvalue().decode('utf-8')
+            print(f"\n[DEBUG] Log Content Before Upload:\n{log_content}")  
+
+            if not log_content.strip():
+                print("\n[ERROR] Log file is empty! Check log writing process!\n")
+                return
+            
             s3.upload_fileobj(log_buffer, bucket_name, f'logs/{log_filename}_log.log')
             print(f"Log file {log_filename}_log uploaded to S3.")
         else:

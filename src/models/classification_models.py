@@ -66,16 +66,6 @@ class preprocess:
         # Check if the target (y) is continuous
         unique_values = len(np.unique(y))
         return unique_values > 1 and np.issubdtype(y.dtype, np.number)
-        # if unique_values <= 1:
-        #     logger.debug("Target is not continuous (only one unique value).")
-        #     return False        # Target variable is constanct, regression is not applicable
-        
-        # if y.dtype not in ['float64', 'int64']:
-        #     logger.debug("Target varibale is not numeric, classification model needed.")
-        #     return False        # Target is not numeric, cannot use regression
-        
-        # logger.debug("Regression model is applicable.")  
-        # return True
 
     def detect_id_columns(data):
         '''
