@@ -13,7 +13,15 @@
         <ul class="download-list">
             <li><a id="pdf_link" href="{{ pdf_url }}" target="_blank">Downdload the Classification Report (PDF)</a></li>
             <li><a id="model_link" href="{{ model_url }}" target="_blank">Download Trained Model</a></li>
-            <li><a id="log_link" href="{{ url_for('view_log', filename=log_url.split('/')[-1]) }}" class="button">View Log</a></li>
+            <li>
+                {% if log_url %}
+                    <a id="log_link" href="{{ url_for('view_log', filename=log_url.split('/')[-1] if '/' in log_url else log_url) }}" class="button">
+                        View Log
+                    </a>
+                {% else %}
+                    <span class="error-message">Log file not available</span>
+                {% endif %}
+            </li>
         </ul>
         <p style="font-weight: bold;">All files are stored for 3 days.</p>
         {% include 'footer.html' %}
@@ -22,7 +30,11 @@
             document.addEventListener("DOMContentLoaded", function() {
             const pdfUrl = "{{ pdf_url | safe }}";
             const modelUrl = "{{ model_url | safe }}";
-            const logUrl = "{{ log_url | safe }}";
+            let logUrl = "{{ log_url | safe }}";
+
+            if (!logUrl || logUrl === "None" || logUrl === "") {
+                    logUrl = null;
+                }
 
             console.log("\n✅ Extracted URLs in JavaScript:");
             console.log("📄 PDF URL:", pdfUrl);
@@ -35,9 +47,11 @@
             if (modelUrl && modelUrl !== "None") {
                 document.getElementById("model_link").href = modelUrl;
             }
-            if (logUrl && logUrl !== "None") {
+            if (logUrl) {
                 document.getElementById("log_link").href = logUrl;
-            }
+            } else {
+                    document.getElementById("log_link").style.display = "none";
+                }
         });
         </script>
     </body>
