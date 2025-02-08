@@ -13,7 +13,7 @@
         <ul class="download-list">
             <li><a id="pdf_link" href="{{ pdf_url }}" target="_blank">Downdload the Classification Report (PDF)</a></li>
             <li><a id="model_link" href="{{ model_url }}" target="_blank">Download Trained Model</a></li>
-            <li><a id="log_link" href="{{ url_for('view_log', filename=log_url) }}" class="button">View Log</a></li>
+            <li><a id="log_link" href="{{ url_for('view_log', filename=log_url.split('/')[-1]) }}" class="button">View Log</a></li>
         </ul>
         <p style="font-weight: bold;">All files are stored for 3 days.</p>
         {% include 'footer.html' %}

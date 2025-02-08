@@ -4,17 +4,54 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>View Log - {{ filename }}</title>
-        <style>body { font-family: Arial, sans-serif; }</style>
+        <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        h1 {
+            text-align: center;
+        }
+        .log-container {
+            width: 80%;
+            margin: 0 auto;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: auto;
+            max-height: 500px;
+            white-space: pre-wrap;
+        }
+        .back-button, .download-button {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .back-button:hover, .download-button:hover {
+            background-color: #0056b3;
+        }
+        </style>
         <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     </head>
     <body>
-        <h2>Log File: {{ filename }}</h2>
-        <pre>
+        <h1>Log File: {{ filename }}</h1>
+        <div class="log-container">
             {% for line in log_content %}
-                {{ line }}
+                {{ line }}<br>
             {% endfor %}
-        </pre>
-        <a href="{{ url_for('download_log', filename=filename) }}">Download Log</a>
+        </div>
+        <a href="{{ url_for('download_log', filename=filename) }}" class="download-button">Download Log</a>
+        <a href="{{ url_for('home') }}" class="back-button">Back to Home</a>
+        
         {% include 'footer.html' %}
     </body>
 </html>
