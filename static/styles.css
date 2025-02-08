@@ -130,7 +130,7 @@ input, select {
 
 pre {
     width: 80%;
-    margin: 0 auto;
+    max-width: 800px;
     background: white;
     padding: 15px;
     border-radius: 5px;
@@ -139,5 +139,4 @@ pre {
     max-height: 500px;
     white-space: pre-wrap;
     text-align: left;
-    font-family: monospace;
 }

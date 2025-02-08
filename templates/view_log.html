@@ -19,18 +19,6 @@
         h2 {
             text-align: center;
         }
-        .log-container {
-            width: 80%;
-            max-width: 800px;
-            background: white;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            overflow: auto;
-            max-height: 500px;
-            white-space: pre-wrap;
-            text-align: left;
-        }
         .download-button {
             display: block;
             width: 200px;
@@ -57,13 +45,11 @@
     <body>
         <h2>Log File: {{ filename }}</h2>
         
-        <div class="log-container">
-            <pre id="log-container">
-                {% for line in log_content %}
-                {{ line }}
-                {% endfor %}
-            </pre>
-        </div>
+        <pre id="log-container">
+            {% for line in log_content %}
+            {{ line }}
+            {% endfor %}
+        </pre>
 
         <a href="{{ url_for('download_log', filename=filename) }}" class="download-button">Download Log</a>
 
@@ -83,10 +69,12 @@
 
                     if (match) {
                         let utcTimeString = match[0].replace(" UTC", "");
-                        let utcDate = new Date(utcTimeString + "Z"); // Z는 UTC를 의미
-                        let localTime = utcDate.toLocaleString();
+                        let utcDate = new Date(utcTimeString + "Z"); // Enable UTC time zone to be recognized by JS
 
-                        return line.replace(utcRegex, localTime);
+                        let userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                        let localTime = utcDate.toLocaleString("en-US", { timeZone: userTimezone });
+
+                        return line.replace(utcRegex, localTime + " (" + userTimezone + ")");
                     }
                     return line;
                 });
