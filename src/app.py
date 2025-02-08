@@ -56,8 +56,6 @@ swagger_ui_blueprint = get_swaggerui_blueprint(
     }
 )
 
-logger, upload_log_to_s3 = setup_global_logger(s3, bucket_name=S3_BUCKET_NAME)#, log_filename=current_filename)
-
 app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 
 current_filename = None
@@ -76,7 +74,7 @@ def classification():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    global logger, upload_log_to_s3
+    global logger, upload_log_to_s3, current_filename
     print("[DEBUG] Implementing upload_file()")
     if 'file' not in request.files:
         print("[ERROR] No file")
@@ -90,14 +88,15 @@ def upload_file():
         return redirect(request.url)
     
     if file:
-        global filename
         filename = file.filename
+        current_filename = filename
         print(f"[DEBUG] File name to upload: {filename}")
 
-        for handler in logger.handlers[:]:
-            logger.removeHandler(handler)
-        
-        logger, upload_log_to_s3 = setup_global_logger(s3, bucket_name=S3_BUCKET_NAME, log_filename=filename)
+        if logger and hasattr(logger, "log_filename"):
+            logger.log_filename = filename
+        else:
+            logger, upload_log_to_s3 = setup_global_logger(s3, bucket_name=S3_BUCKET_NAME, log_filename=filename)
+
 
         # Use the existing function to upload the file directly to S3
         s3_file_path = f"uploaded/{file.filename}"
@@ -247,11 +246,6 @@ def classification_result():
     pdf_url = session.get('pdf_url')
     model_url = session.get('model_url')
     log_url = session.get('log_url')
-
-    print("\n=== Accessing classification_result ===")
-    print("PDF URL:", pdf_url)
-    print("Model URL:", model_url)
-    print("Log URL:", log_url)
 
     if not pdf_url or not model_url or not log_url:
         flash("Error: Missing classification result data. Please try again.")

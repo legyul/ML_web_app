@@ -26,6 +26,7 @@ def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_
     handler = logging.StreamHandler(log_buffer)
     handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
     logger.addHandler(handler)
+    logger.debug("Debugging: Log buffer test")
 
     def upload_log_to_s3():
         if s3:
