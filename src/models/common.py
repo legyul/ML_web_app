@@ -48,7 +48,7 @@ def setup_global_logger(log_level=logging.DEBUG):
     Returns
     - logger: Configured logger
     '''
-    log_dir = './_logs'
+    log_dir = 'result/logs'
     os.makedirs(log_dir, exist_ok=True)
 
     # Create log file path using the dataset filename
@@ -70,7 +70,7 @@ def setup_global_logger(log_level=logging.DEBUG):
 # Load dataset file
 def load_file(file_key):
     file_name = file_key.split('/')[-1]
-    file_path = f"uploads/uploaded/{file_name}"
+    file_path = f"uploaded/{file_name}"
     
     # Check if the file exists in S3 bucket
     try:
@@ -85,7 +85,7 @@ def load_file(file_key):
     # Download the file to a temporary directory
     temp_file_path = f"/tmp/{file_name}"
     with open(temp_file_path, 'wb') as f:
-        s3.download_fileobj(S3_BUCKET_NAME, f'uploads/uploaded/{file_name}', f)
+        s3.download_fileobj(S3_BUCKET_NAME, f'uploaded/{file_name}', f)
     
     # Determine file extension
     file_extension = file_name.split('.')[-1]
