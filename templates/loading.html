@@ -69,9 +69,12 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ filename, model_choice })
+                body: JSON.stringify({ filename: filename, model_choice: model_choice })
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log("\n✅ Response Status:", response.status);
+                return response.json();
+            })
             .then(data => {
                 console.log("\n=== API Response ===");
                 console.log(data);
