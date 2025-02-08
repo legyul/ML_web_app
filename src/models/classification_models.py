@@ -16,8 +16,8 @@ from scipy.stats import uniform
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import time
+from logger_utils import logger
 
-logger = setup_global_logger()
 
 class preprocess:
     def column_types(data):

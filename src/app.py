@@ -1,7 +1,7 @@
 import os
 import sys
 from models import run_cluster, run_classification #, common
-from logger_utils import setup_global_logger
+from logger_utils import logger, upload_log_to_s3
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify, session, Response
 from werkzeug.utils import secure_filename
 import boto3
@@ -58,14 +58,7 @@ swagger_ui_blueprint = get_swaggerui_blueprint(
 
 app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 
-logger, upload_log_to_s3 = None, None
-
-@app.before_request
-def initialize_logger():
-    global logger, upload_log_to_s3
-    if logger is None:  
-        print("[INFO] Logger was None. Initializing now...")
-        logger, upload_log_to_s3 = setup_global_logger(s3, bucket_name=S3_BUCKET_NAME)
+current_filename = None
 
 @app.route('/')
 def home():
@@ -81,8 +74,10 @@ def classification():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    global logger, upload_log_to_s3, current_filename
+    global current_filename
+
     print("[DEBUG] Implementing upload_file()")
+
     if 'file' not in request.files:
         print("[ERROR] No file")
         return redirect(request.url)
@@ -91,7 +86,7 @@ def upload_file():
     task = request.form.get('task')
     
     if file.filename == '':
-        print("[ERROR] No file name")
+        logger.error("[ERROR] No file name")
         return redirect(request.url)
     
     if file:
@@ -99,13 +94,7 @@ def upload_file():
         current_filename = filename
         print(f"[DEBUG] File name to upload: {filename}")
 
-        if logger is None:
-            print("[INFO] Logger is None. Initializing...")
-            logger, upload_log_to_s3 = setup_global_logger(s3, bucket_name=S3_BUCKET_NAME, log_filename=filename)
-        else:
-            print("[INFO] Logger exists. Updating filename.")
-            logger.log_filename = filename
-
+        logger.log_filename = current_filename
 
         # Use the existing function to upload the file directly to S3
         s3_file_path = f"uploaded/{file.filename}"

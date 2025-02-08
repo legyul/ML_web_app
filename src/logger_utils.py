@@ -1,8 +1,13 @@
 import logging
 import io
-import os
+import boto3
 
-def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_filename='default_log'):
+S3_BUCKET_NAME = "ml-platform-service"
+s3 = boto3.client("s3")
+
+log_buffer = io.StringIO()
+
+def setup_global_logger(log_level=logging.DEBUG, log_filename='default_log'):
     '''
     Setup a global logger with the specified log file name and level.
     If `s3` is provided, it will upload logs to S3.
@@ -19,31 +24,33 @@ def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_
     # log_dir = './_logs'
     # os.makedirs(log_dir, exist_ok=True)
 
-    log_buffer = io.BytesIO()
-    logger = logging.getLogger('global_logger')
+    logger = logging.getLogger('AppLogger')
     logger.setLevel(log_level)
 
-    handler = logging.StreamHandler(log_buffer)
-    handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-    logger.addHandler(handler)
-    logger.debug("Debugging: Log buffer test")
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
 
-    def upload_log_to_s3():
-        if s3:
-            log_buffer.seek(0)
-            log_buffer.flush()
+    stream_handler = logging.StreamHandler(log_buffer)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+    
+    logger.log_filename = log_filename
 
-            log_content = log_buffer.getvalue()
-            print(f"\n[DEBUG] Log Content Before Upload:\n{log_content}")  
 
-            if not log_content.strip():
-                print("\n[ERROR] Log file is empty! Check log writing process!\n")
-                return
-            
-            #byte_log_buffer = io.BytesIO(log_content.encode('utf-8'))
-            s3.upload_fileobj(log_buffer, bucket_name, f'logs/{log_filename}_log.log')
-            print(f"Log file {log_filename}_log uploaded to S3.")
-        else:
-            print(f"Log file {log_filename}_log is stored locally.")
+    return logger
 
-    return logger, upload_log_to_s3
+def upload_log_to_s3():
+    if log_buffer.getvalue():
+        log_content = log_buffer.getvalue()
+        log_buffer.seek(0)
+
+        s3_key = f"logs/{logger.log_filename}_log.log"
+        s3.put_object(Bucket=S3_BUCKET_NAME, Key=s3_key, Body=log_content)
+
+        print(f"[DEBUG] Log uploaded to S3: {s3_key}")
+    
+    else:
+        print("[ERROR] Log file is empty! Check log writing process!")
+    
+logger = setup_global_logger()
