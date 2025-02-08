@@ -19,7 +19,7 @@ def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_
     # log_dir = './_logs'
     # os.makedirs(log_dir, exist_ok=True)
 
-    log_buffer = io.StringIO()
+    log_buffer = io.BytesIO()
     logger = logging.getLogger('global_logger')
     logger.setLevel(log_level)
 
@@ -31,7 +31,7 @@ def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_
         if s3:
             log_buffer.seek(0)
             log_buffer.flush()
-            
+
             log_content = log_buffer.getvalue()
             print(f"\n[DEBUG] Log Content Before Upload:\n{log_content}")  
 
@@ -39,8 +39,8 @@ def setup_global_logger(s3=None, bucket_name=None, log_level=logging.DEBUG, log_
                 print("\n[ERROR] Log file is empty! Check log writing process!\n")
                 return
             
-            byte_log_buffer = io.BytesIO(log_content.encode('utf-8'))
-            s3.upload_fileobj(byte_log_buffer, bucket_name, f'logs/{log_filename}_log.log')
+            #byte_log_buffer = io.BytesIO(log_content.encode('utf-8'))
+            s3.upload_fileobj(log_buffer, bucket_name, f'logs/{log_filename}_log.log')
             print(f"Log file {log_filename}_log uploaded to S3.")
         else:
             print(f"Log file {log_filename}_log is stored locally.")
