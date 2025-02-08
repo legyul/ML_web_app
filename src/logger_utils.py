@@ -1,6 +1,7 @@
 import logging
 import io
 import boto3
+from datetime import datetime
 
 S3_BUCKET_NAME = "ml-platform-service"
 s3 = boto3.client("s3")
@@ -13,7 +14,6 @@ def setup_global_logger(log_level=logging.DEBUG, log_filename='default_log'):
     If `s3` is provided, it will upload logs to S3.
 
     Parameters:
-    - s3 (boto3.client): S3 클라이언트
     - log_level (int): Logging level (e.g., DEBUG, INFO)
     - log_filename (str): The filename of the log (default is 'default_log.log')
 
@@ -21,21 +21,32 @@ def setup_global_logger(log_level=logging.DEBUG, log_filename='default_log'):
     - logger: Configured logger
     - upload_log_to_s3: Function to upload log to S3
     '''
-    # log_dir = './_logs'
-    # os.makedirs(log_dir, exist_ok=True)
-
     logger = logging.getLogger('AppLogger')
     logger.setLevel(log_level)
 
     for handler in logger.handlers[:]:
         logger.removeHandler(handler)
 
+    class UTCFormatter(logging.Formatter):
+        def formatTime(self, record, datefmt=None):
+            utc_dt = datetime.utcfromtimestamp(record.created)
+            return utc_dt.strftime('%Y-%m-%d %H:%M:%S')  # UTC 시간 저장
+
+    formatter = UTCFormatter('%(asctime)s - %(levelname)s - %(message)s')
+
+    # Memory Log Storage Handler
     stream_handler = logging.StreamHandler(log_buffer)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
+
+    # Log File Storage Handler
+    file_handler = logging.FileHandler(log_filename, mode='a', encoding='utf-8')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
     
+    # Save log file name
     logger.log_filename = log_filename
+    logger.log_buffer = log_buffer
 
 
     return logger

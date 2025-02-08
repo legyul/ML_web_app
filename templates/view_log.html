@@ -10,9 +10,26 @@
             margin: 20px;
             padding: 20px;
             background-color: #f8f9fa;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
         h2 {
             text-align: center;
+        }
+        .log-container {
+            width: 80%;
+            max-width: 800px;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow: auto;
+            max-height: 500px;
+            white-space: pre-wrap;
+            text-align: left;
         }
         .download-button {
             display: block;
@@ -29,39 +46,54 @@
             background-color: #0056b3;
         }
         .footer-container {
-            text-align: center;
             width: 100%;
-            margin-top: 50px;
-            margin-bottom: 20px;
-        }
-        .container {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding-bottom: 80px;
+            margin-top: auto;
+            padding: 10px 0;
+            text-align: center;
         }
         </style>
         <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     </head>
     <body>
-        <div class="container">
-            <h2>Log File: {{ filename }}</h2>
-            
-            <pre>
+        <h2>Log File: {{ filename }}</h2>
+        
+        <div class="log-container">
+            <pre id="log-container">
                 {% for line in log_content %}
                 {{ line }}
                 {% endfor %}
             </pre>
-    
-            <a href="{{ url_for('download_log', filename=filename) }}" class="download-button">Download Log</a>
-
         </div>
+
+        <a href="{{ url_for('download_log', filename=filename) }}" class="download-button">Download Log</a>
 
         <div class="footer-container">
             {% include 'footer.html' %}
         </div>
+
+        <script>
+            // Log Time Conversion (UTC → Local Time Auto Conversion)
+            document.addEventListener("DOMContentLoaded", function() {
+                let logContentElement = document.getElementById("log-content");
+                let logLines = logContentElement.innerText.split("\n");
+
+                let convertedLogs = logLines.map(line => {
+                    let utcRegex = /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC/;
+                    let match = line.match(utcRegex);
+
+                    if (match) {
+                        let utcTimeString = match[0].replace(" UTC", "");
+                        let utcDate = new Date(utcTimeString + "Z"); // Z는 UTC를 의미
+                        let localTime = utcDate.toLocaleString();
+
+                        return line.replace(utcRegex, localTime);
+                    }
+                    return line;
+                });
+
+                logContentElement.innerText = convertedLogs.join("\n");
+            });
+        </script>
 
     </body>
 </html>
