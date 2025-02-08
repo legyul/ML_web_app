@@ -11,7 +11,7 @@
             padding: 20px;
             background-color: #f8f9fa;
         }
-        h1 {
+        h2 {
             text-align: center;
         }
         pre {
@@ -42,21 +42,35 @@
             background-color: #0056b3;
         }
         .footer-container {
-            margin-top: 50px;
             text-align: center;
+            width: auto;
+            margin-top: 50px;
+            margin-bottom: 20px;
+        }
+        .container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding-bottom: 80px;
         }
         </style>
         <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     </head>
     <body>
-        <h1>Log File: {{ filename }}</h1>
-        <a href="{{ url_for('download_log', filename=filename) }}" class="download-button">Download Log</a>
-        
-        <pre>
-            {% for line in log_content %}
+        <div class="container">
+            <h2>Log File: {{ filename }}</h2>
+            
+            <pre>
+                {% for line in log_content %}
                 {{ line }}
-            {% endfor %}
-        </pre>
+                {% endfor %}
+            </pre>
+    
+            <a href="{{ url_for('download_log', filename=filename) }}" class="download-button">Download Log</a>
+
+        </div>
 
         <div class="footer-container">
             {% include 'footer.html' %}
