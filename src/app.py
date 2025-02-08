@@ -221,9 +221,13 @@ def start_classification(filename):
         upload_log_to_s3()
 
         # Generate Download URL
-        session['model_url'] = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_model_and_info.zip")
-        session['pdf_url'] = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_Report.pdf")
-        session['log_url'] = generate_presigned_url(S3_BUCKET_NAME, f"logs/{filename}_log.log")
+        model_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_model_and_info.zip")
+        pdf_url = generate_presigned_url(S3_BUCKET_NAME, f"result/{filename}_{model_choice}_Report.pdf")
+        log_url = generate_presigned_url(S3_BUCKET_NAME, f"logs/{filename}_log.log")
+
+        session['pdf_url'] = pdf_url
+        session['model_url'] = model_url
+        session['log_url'] = log_url
 
         progress_status = "Classification completed!"
         return jsonify({"message": "Classification completed. You can now view the results."})
@@ -241,7 +245,8 @@ def classification_result():
     log_url = session.get('log_url')
 
     if not pdf_url or not model_url or not log_url:
-        return "Missing parameters", 400
+        flash("Error: Missing classification result data. Please try again.")
+        return redirect(url_for('index'))
     
     return render_template(
         'classification_result.html',
