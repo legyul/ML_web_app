@@ -232,11 +232,6 @@ def start_classification(filename):
         session['model_url'] = model_url
         session['log_url'] = log_url
 
-        print("\n=== Session Data Saved ===")
-        print("PDF URL:", session.get('pdf_url'))
-        print("Model URL:", session.get('model_url'))
-        print("Log URL:", session.get('log_url'))
-
         progress_status = "Classification completed!"
         return jsonify({"message": "Classification completed. You can now view the results."})
     
@@ -311,7 +306,7 @@ def download_log(filename):
         return f"Error retrieving log file: {str(e)}", 500
 
 def get_log_content_from_s3(s3_key):
-    print(f"\n[DEBUG] Fetching log content from S3: {s3_key}")  # ✅ 디버깅 추가
+    print(f"[DEBUG] Attempting to retrieve log from S3 with key: {s3_key}")  # ✅ 디버깅 추가
 
     try:
         response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)

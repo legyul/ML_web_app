@@ -51,7 +51,7 @@
                 const logFileName = logUrl.split('/').pop();
                 console.log("📜 Extracted Log Filename:", logFileName);
 
-                document.getElementById("log_link").href = `/view_log/${logFileName}`;
+                document.getElementById("log_link").href = "/view_log/" + logUrl.split('/').pop();
         }
         });
         </script>
