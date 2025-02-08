@@ -3,7 +3,6 @@ import numpy as np
 import math
 from collections import defaultdict, Counter
 import re
-from .common import setup_global_logger
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.model_selection import train_test_split, StratifiedKFold
