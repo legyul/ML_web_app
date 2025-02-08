@@ -313,6 +313,7 @@ def get_log_content_from_s3(filename):
         print(f"Debug: Retrieving log from S3 with key: {s3_key}")
 
         response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+        response = response.replace("http://", "https://")
         log_content = response['Body'].read().decode('utf-8')
 
         return log_content
