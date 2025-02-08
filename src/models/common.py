@@ -69,8 +69,15 @@ def setup_global_logger(log_level=logging.DEBUG):
 
 # Load dataset file
 def load_file(file_key):
+    if not file_key:
+        raise ValueError("Error: file_key is None. Check the function call.")
+    print(f"\nFile key: {file_key}\n")
     file_name = file_key.split('/')[-1]
     file_path = f"uploaded/{file_name}"
+
+    if not file_name or not file_path:
+        raise ValueError("Error: file_path is not generated correctly.")
+    print(f"\nChecking file in S3: {file_path}")
     
     # Check if the file exists in S3 bucket
     try:
@@ -85,14 +92,14 @@ def load_file(file_key):
     # Download the file to a temporary directory
     temp_file_path = f"/tmp/{file_name}"
     with open(temp_file_path, 'wb') as f:
-        s3.download_fileobj(S3_BUCKET_NAME, f'uploaded/{file_name}', f)
+        s3.download_fileobj(S3_BUCKET_NAME, file_path, f)
     
     # Determine file extension
     file_extension = file_name.split('.')[-1]
 
     max_file_size = 100 * 1024 * 1024 # 100MB
     
-    mode = ""
+    mode = "pandas"
 
     if file_size > max_file_size:
         mode = "spark"
