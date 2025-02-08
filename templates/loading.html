@@ -68,20 +68,21 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ filename, model_choice })
+                body: JSON.stringify({ filename: "{{ filename }}", model_choice: "{{ model_choice }}" })
             })
             .then(response => response.json())
             .then(data => {
+                console.log("\n=== API Response ===");
+                console.log(data);
+
                 if (data.error) {
                     document.getElementById("loading").innerHTML = "Error: " + data.error;
                 } else {
-                        // "View Results" button activate
-                        document.getElementById("view-results").style.display = "block";
-                        document.getElementById("loading").innerText = "Processing complete! Click 'View Results' to see the outcome.";
+                    document.getElementById("viewResultsButton").style.display = "block";
                 }
             })
             .catch(error => {
-                console.error("Error:", error);
+                console.error("\n=== Fetch Error ===", error);
             });
         }
         
@@ -100,9 +101,9 @@
         }
 
         function goToResults() {
-                if (pdf_url && model_url && log_url) {
-                    window.location.href = `/classification_result`;
-                }
+                console.log("Navigating to classification result page...")
+                window.location.href = `/classification_result`;
+                
             }
 
         startClassification();                  // Start classification using AJAX

@@ -229,11 +229,17 @@ def start_classification(filename):
         session['model_url'] = model_url
         session['log_url'] = log_url
 
+        print("\n=== Session Data Saved ===")
+        print("PDF URL:", session.get('pdf_url'))
+        print("Model URL:", session.get('model_url'))
+        print("Log URL:", session.get('log_url'))
+
         progress_status = "Classification completed!"
         return jsonify({"message": "Classification completed. You can now view the results."})
     
     except Exception as e:
         progress_status = "Error occurred!"
+        print(f"\n=== Error in start_classification ===\n{e}\n")
         return jsonify({"Error": str(e)}), 500
 
 progress_status = "Waiting..."
@@ -244,9 +250,14 @@ def classification_result():
     model_url = session.get('model_url')
     log_url = session.get('log_url')
 
+    print("\n=== Accessing classification_result ===")
+    print("PDF URL:", pdf_url)
+    print("Model URL:", model_url)
+    print("Log URL:", log_url)
+
     if not pdf_url or not model_url or not log_url:
         flash("Error: Missing classification result data. Please try again.")
-        return redirect(url_for('index'))
+        return redirect(url_for('home'))
     
     return render_template(
         'classification_result.html',
