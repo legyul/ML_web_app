@@ -276,22 +276,21 @@ def progress():
 
 @app.route('/view_log/<filename>')
 def view_log():
-    log_s3_key = f"logs/{filename}"
+    log_url = request.args.get('filename')
 
-    try:
-        response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=log_s3_key)
-        log_content = response['Body'].read().decode('utf-8')
-
-        print("\n[DEBUG] Successfully retrieved log content!")
-        return render_template('view_log.html', log_content=log_content.splitlines(), filename=filename)
-    
-    except s3.exceptions.NoSuchKey:
-        print(f"[ERROR] Log file '{log_s3_key}' not found in S3.")  # 디버깅 로그
-        return "Log file not found.", 404
-
-    except Exception as e:
-        print(f"[ERROR] Error retrieving log file: {str(e)}")  # 디버깅 로그
-        return f"Error retrieving log file: {str(e)}", 500
+    if log_url:
+        print(f"\n[DEBUG] Received log_url: {log_url}")
+        try:
+            log_content = get_log_content_from_s3(log_url)
+            if log_content:
+                return render_template('view_log.html', log_content=log_content.splitlines(), filename=log_url.split('/')[-1])
+            else:
+                return "Error retrieving log content.", 500
+        except Exception as e:
+            print(f"[ERROR] retrieving log file: {str(e)}")
+            return f"Error retrieving log file: {str(e)}", 500
+    else:
+        return "No log file URL provided", 400
 
 @app.route('/download_log/<filename>')
 def download_log(filename):
@@ -311,6 +310,22 @@ def download_log(filename):
         return "Log file not found.", 404
     except Exception as e:
         return f"Error retrieving log file: {str(e)}", 500
+
+def get_log_content_from_s3(log_url):
+    # Convert S3 URL to Key
+    s3_key = log_url.split('?')[0].replace(f'https://{S3_BUCKET_NAME}.s3.amazonaws.com/', '')  # Extract Key from S3 path
+
+    print(f"Debug: Attempting to retrieve log from S3 with key:{s3_key}")  # 디버깅용 로그
+
+    try:
+        response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+        log_content = response['Body'].read().decode('utf-8')  # Read file content
+        return log_content
+    except s3.exceptions.NoSuchKey as e:
+        print(f"[ERROR] Object not found. Ensure the key is correct: {e}")
+    except Exception as e:
+        print(f"Error reading log file from S3: {e}")  # 디버깅용 로그
+        return None
 
 # Upload generated files to S3 bucket
 def upload_to_s3_direct(bucket_name, files):
