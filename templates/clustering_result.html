@@ -16,7 +16,7 @@
         {% endfor %}
       {% endif %}
     {% endwith %}
-    
+
     <h1>Clustering Results</h1>
     <p class="download-text">Download the result files:</p>
     <ul class="download-list">
@@ -24,6 +24,8 @@
         <li><a href="{{ csv_url }}">Download Result CSV</a></li>
     </ul>
     <p style="font-weight: bold;">All files are stored for 3 days.</p>
-    {% include 'footer.html' %}
+    <div class="footer-container">
+            {% include 'footer.html' %}
+    </div>
 </body>
 </html>
