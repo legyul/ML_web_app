@@ -1,0 +1,32 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+	- master
+
+jobs:
+    deploy:
+	runs-on: ubuntu-latest
+
+	steps:
+	    - name: Checkout repository
+	      uses: actions/checkout@v4
+
+	    - name: Setup SSH
+	      run: |
+		mkdir -p ~/.ssh
+		echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+		chmod 600 ~/.ssh/id_rsa
+		ssh-keyscan -H 34.233.67.251 >> ~/.ssh/known_hosts
+
+	    - name: Deploy to EC2
+	      run: |
+		ssh -i ~/.ssh/id_rsa ec2-user@34.233.67.251 << 'EOF'
+          	cd /home/ec2-user/ML_PaaS
+          	git pull origin master
+          	docker build -t ml-platform .
+          	docker stop platform-container || true
+          	docker rm platform-container || true
+		docker run -d --name platform-container --env-file .env -p 5000:5000 ml-platform
+		EOF
