@@ -1,7 +1,6 @@
 import os
 import io
 import json
-import cloudpickle
 import pickle
 import importlib
 import subprocess
@@ -45,6 +44,9 @@ def load_model(model_path):
                     print(f"Error installing package {package}: {e}")
                     continue
         
+        module_name = "models.classification_models"
+        sys.modules[module_name] = sys.modules[__name__]
+
         # Load model
         with open(model_path, "rb") as f:
             model = pickle.load(f)
@@ -72,7 +74,8 @@ def save_model_with_info(model, model_name, required_packages=None):
     model_info_buffer.seek(0)
     
     model_buffer = io.BytesIO()
-    cloudpickle.dump(model, model_buffer)
+    model.load_model = load_model
+    pickle.dump(model, model_buffer)
     model_buffer.seek(0)
     
     return model_info_buffer, model_buffer
