@@ -19,6 +19,7 @@ joblib
 matplotlib
 seaborn
 s3fs
+cloudpickle
 
 # NLP & Text Processing
 nltk
