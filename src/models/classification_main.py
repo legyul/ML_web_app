@@ -55,10 +55,12 @@ def run_classification(file_key, model_choice):
     
     if y_type == 'categorical':
         model = BestModel(model=best_model, label_mapping=label_map)
+        model.__class__.__module__ = "__main__"
         
         model_info_buffer, model_buffer = save_model_with_info(model=model, model_name=model_name, required_packages=required_packages)
     
     else:
+        best_model.__class__.__module__ = "__main__"
         model_info_buffer, model_buffer = save_model_with_info(model=best_model, model_name=model_name, required_packages=required_packages)
     
     if regression:
