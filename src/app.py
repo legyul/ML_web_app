@@ -1,6 +1,6 @@
 import os
 import sys
-from models import run_cluster, run_classification #, common
+from models import run_cluster, run_classification
 from logger_utils import logger, upload_log_to_s3
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify, session, Response
 from werkzeug.utils import secure_filename

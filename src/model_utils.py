@@ -1,6 +1,7 @@
 import os
 import io
 import json
+import cloudpickle
 import pickle
 import importlib
 import subprocess
@@ -65,16 +66,13 @@ def save_model_with_info(model, model_name, required_packages=None):
         "required_packages": required_packages
     }
 
-    # model_file_path = f'./trained_models/{model_name}.pkl'
-    # model_info_path = f'./trained_models/{model_name}_info.json'
-
     model_info_buffer = io.BytesIO()
     model_info_json = json.dumps(model_info)
     model_info_buffer.write(model_info_json.encode('utf-8'))
     model_info_buffer.seek(0)
     
     model_buffer = io.BytesIO()
-    pickle.dump(model, model_buffer)
+    cloudpickle.dump(model, model_buffer)
     model_buffer.seek(0)
     
     return model_info_buffer, model_buffer
