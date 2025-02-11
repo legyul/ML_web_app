@@ -74,7 +74,7 @@ def save_model_with_info(model, model_name, required_packages=None):
     model_info_buffer.seek(0)
     
     model_buffer = io.BytesIO()
-    model.__class__.__module__ = "__main__"
+
     pickle.dump(model, model_buffer)
     model_buffer.seek(0)
     
