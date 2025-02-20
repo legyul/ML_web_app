@@ -23,9 +23,21 @@
         <li><a href="{{ pdf_url }}">Download PDF Report</a></li>
         <li><a href="{{ csv_url }}">Download Result CSV</a></li>
     </ul>
+
+    <button onclick="goToChat()">Ask a Question</button>
+
     <p style="font-weight: bold;">All files are stored for 3 days.</p>
+
     <div class="footer-container">
             {% include 'footer.html' %}
     </div>
+
+    <script>
+        function goToChat() {
+            let filename = "{{ filename }}";
+            window.location.href = `/chat?task=clustering&filename=${filename}`;
+        }
+    </script>
+
 </body>
 </html>

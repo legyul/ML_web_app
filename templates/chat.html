@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>Chat with AI</h1>
+
+    <p id="task-info"></p>
+
+    <label for="question">Ask a question:</label>
+    <input type="text" id="question" placeholder="Enter your question">
+    <button onclick="askQuestion()">Submit</button>
+
+    <br><br>
+
+    <h2>Response:</h2>
+    <p id="response"></p>
+
+    <script>
+        // Get 'task' and 'filename' from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const task = urlParams.get("task");
+        const filename = urlParams.get("filename");
+
+        // Display task information on the page
+        document.getElementById("task-info").innerText = `Current Task: ${task}`;
+
+        async function askQuestion() {
+            let question = document.getElementById("question").value;
+
+            let response = await fetch("/ask", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ task: task, filename: filename, question: question })
+            });
+
+            let result = await response.json();
+            document.getElementById("response").innerText = result.response;
+        }
+    </script>
+</body>
+</html>
