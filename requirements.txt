@@ -46,3 +46,6 @@ auto-gptq
 
 # GPT-3.5-Trubo API
 openai
+
+pytz
+python-dateutil
