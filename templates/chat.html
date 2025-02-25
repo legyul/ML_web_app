@@ -12,34 +12,65 @@
     <p id="task-info"></p>
 
     <label for="question">Ask a question:</label>
-    <input type="text" id="question" placeholder="Enter your question">
+    <input type="text" id="question" placeholder="Enter your question" onkeypress="handleKeyPress(event)">
     <button onclick="askQuestion()">Submit</button>
 
     <br><br>
 
     <h2>Response:</h2>
-    <p id="response"></p>
+    <p id="response" style="white-space: pre-line;"></p>  <!-- ✅ New Line Processing -->
 
+    <div class="footer-container">
+        {% include 'footer.html' %}
+    </div>
+    
     <script>
-        // Get 'task' and 'filename' from URL
+        // ✅ Get 'task' and 'filename' from URL
         const urlParams = new URLSearchParams(window.location.search);
-        const task = urlParams.get("task");
-        const filename = urlParams.get("filename");
+        const task = urlParams.get("task") || "unknown";  // Set default
+        const filename = urlParams.get("filename") || "unknown";
 
-        // Display task information on the page
+        // ✅ Display task information on the page
         document.getElementById("task-info").innerText = `Current Task: ${task}`;
 
+        // ✅ Submit a question when entering the "Enter" key
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                askQuestion();
+            }
+        }
+
         async function askQuestion() {
-            let question = document.getElementById("question").value;
+            let question = document.getElementById("question").value.trim();  // ✅ Remove space
 
-            let response = await fetch("/ask", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ task: task, filename: filename, question: question })
-            });
+            // ✅ Deal with questions if they are not entered
+            if (!question) {
+                alert("Please enter a question.");
+                return;
+            }
 
-            let result = await response.json();
-            document.getElementById("response").innerText = result.response;
+            document.getElementById("response").innerText = "Loading...";  // ✅ Load indication
+
+            try {
+                let response = await fetch("/ask", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ task: task, filename: filename, question: question })
+                });
+
+                let result = await response.json();
+
+                // ✅ Response processing (including error messages)
+                if (result.response) {
+                    document.getElementById("response").innerText = result.response;
+                } else if (result.error) {
+                    document.getElementById("response").innerText = `Error: ${result.error}`;
+                } else {
+                    document.getElementById("response").innerText = "Unexpected error occurred.";
+                }
+            } catch (error) {
+                document.getElementById("response").innerText = `Error: ${error.message}`;
+            }
         }
     </script>
 </body>

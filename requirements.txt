@@ -19,8 +19,6 @@ joblib
 matplotlib
 seaborn
 s3fs
-openai
-requests
 
 # NLP & Text Processing
 nltk

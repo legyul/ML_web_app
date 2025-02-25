@@ -12,7 +12,9 @@ import io
 import pandas as pd
 from fpdf import FPDF
 import pickle
-import requests
+import torch
+from rag import ask_gpt_rag
+from lora_train import model, tokenizer
 
 # Load environment variables from .env file
 load_dotenv()
@@ -58,6 +60,9 @@ swagger_ui_blueprint = get_swaggerui_blueprint(
 app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 
 current_filename = None
+
+device = "cpu"
+model.to(device)
 
 @app.route('/')
 def home():
@@ -403,43 +408,23 @@ def ask_question():
     filename = data.get("filename", "unknown")
     question = data.get("question", "")
 
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    # Search for documents related to questions using the RAG
+    relevant_data = ask_gpt_rag(question)
 
-    if not OPENAI_API_KEY:
-        return jsonify({"error": "OpenAI API Key is missing!"}), 500
+    # Use MPT-7B (LoRA) models when certain keywords are included
+    if "classification" in task or "clustering" in task:
+        print("Using MPT-7B (LoRA)")
+        inputs = tokenizer(question, return_tensors="pt").to("cpu")
 
-    headers = {
-        "Authorization": f"Bearer {OPENAI_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    # ✅ S3에서 클러스터링 결과 또는 모델 정보를 가져오기
-    if task == "clustering":
-        csv_key = f"result/{filename}_results.csv"
-        pdf_key = f"result/{filename}_report.pdf"
-        context = f"Clustering result stored in S3: {csv_key}, Report: {pdf_key}"
-    elif task == "classification":
-        model_key = f"result/{filename}_model_and_info.zip"
-        pdf_key = f"result/{filename}_Report.pdf"
-        context = f"Classification model stored in S3: {model_key}, Report: {pdf_key}"
+        with torch.no_grad():
+            output = model.generate(**inputs, max_length=100)
+        response_text = tokenizer.decode(output[0], skip_special_tokens=True)
+        return jsonify({"response": response_text})
+    
+    # Common Questions Use GPT-3.5-Turbo
     else:
-        context = "Unknown task."
-
-    payload = {
-        "model": "gpt-4",
-        "messages": [
-            {"role": "system", "content": "You are an AI assistant helping with clustering and classification analysis."},
-            {"role": "user", "content": f"Based on the stored files, {question}\n\n{context}"}
-        ]
-    }
-
-    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-
-    if response.status_code == 200:
-        answer = response.json()["choices"][0]["message"]["content"]
-        return jsonify({"response": answer})
-    else:
-        return jsonify({"error": "Failed to fetch response from OpenAI API"}), 500
+        print("Using GPT-3.5-Turbo")
+        return jsonify({"response": relevant_data})
 
 if __name__ == '__main__':
     app.run(debug=True)
