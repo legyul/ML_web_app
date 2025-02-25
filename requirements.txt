@@ -6,6 +6,7 @@ gunicorn
 # AWS SDK
 boto3==1.34.111
 botocore
+jmespath
 
 # Environment Variables
 python-dotenv==0.21.0
