@@ -31,3 +31,20 @@ pySpark==3.5.2
 # Report Generation
 reportlab
 fpdf==1.7.2
+
+# RAG
+chromadb
+sentence-transformers
+langchain
+
+# LoRA
+peft
+transformers
+datasets
+accelerate
+bitsandbytes
+trl
+auto-gptq
+
+# GPT-3.5-Trubo API
+openai
