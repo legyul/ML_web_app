@@ -39,7 +39,7 @@ RUN curl -O https://archive.apache.org/dist/spark/spark-3.5.2/spark-3.5.2-bin-ha
 RUN pip install --upgrade pip
 COPY requirements.txt .
 RUN pip install --no-deps --no-cache-dir -r requirements.txt
-RUN pip install --upgrade numpy pandas
+RUN pip install --no-cache-dir --upgrade numpy pandas scikit-learn
 
 # Copy all files in the current directory to /app in the container
 COPY ./src /app/src
