@@ -39,12 +39,14 @@ RUN curl -O https://archive.apache.org/dist/spark/spark-3.5.2/spark-3.5.2-bin-ha
 RUN pip install --upgrade pip
 COPY requirements.txt .
 RUN pip install --no-deps --no-cache-dir -r requirements.txt
+RUN pip install --upgrade numpy pandas
 
 # Copy all files in the current directory to /app in the container
 COPY ./src /app/src
 COPY ./templates /app/templates
 COPY ./static /app/static
 COPY requirements.txt /app/
+
 
 #RUN export $(cat .env | xargs)
 
