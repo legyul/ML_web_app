@@ -18,7 +18,7 @@ scikit-learn==1.2.2
 pandas
 numpy
 scipy
-joblib==1.11.4
+joblib
 matplotlib==3.8.2
 seaborn==0.12.2
 s3fs==2023.12.2
