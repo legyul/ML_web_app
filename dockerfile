@@ -37,7 +37,7 @@ RUN curl -O https://archive.apache.org/dist/spark/spark-3.5.2/spark-3.5.2-bin-ha
 
 # Install requirement files
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir pip setuptools wheel packaging Pillow
+RUN pip install --no-cache-dir pip setuptools wheel packaging Pillow pyparsing
 COPY requirements.txt .
 RUN pip install --no-deps --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir --upgrade numpy pandas scikit-learn
