@@ -119,6 +119,3 @@ def run_classification(file_key, model_choice):
     except Exception as e:
         print(f"Error during {file_name}: {e}")
         return None, None
-
-
-run_classification("/Users/namgyulee/Downloads/data/iris.csv", "Naive Bayes")
