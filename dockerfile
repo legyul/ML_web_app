@@ -35,6 +35,17 @@ RUN curl -O https://archive.apache.org/dist/spark/spark-3.5.2/spark-3.5.2-bin-ha
     && mv spark-3.5.2-bin-hadoop3 /usr/local/spark \
     && rm spark-3.5.2-bin-hadoop3.tgz
 
+# Install Hadoop Native Library
+RUN mkdir -p /usr/local/hadoop/lib/native && \
+    cd /usr/local/hadoop/lib/native && \
+    curl -O https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz && \
+    tar -xvzf hadoop-3.3.6.tar.gz && \
+    mv hadoop-3.3.6/lib/native/* /usr/local/hadoop/lib/native/ && \
+    rm -rf hadoop-3.3.6 hadoop-3.3.6.tar.gz
+
+ENV HADOOP_OPTS="-Djava.library.path=/usr/local/hadoop/lib/native"
+ENV LD_LIBRARY_PATH="/usr/local/hadoop/lib/native:$LD_LIBRARY_PATH"
+
 # Install requirement files
 RUN pip install --upgrade pip
 #RUN pip install --no-cache-dir pip setuptools wheel packaging Pillow pyparsing cycler
@@ -64,4 +75,4 @@ COPY requirements.txt /app/
 # EXPOSE 80
 
 # 7. Run Flask server
-CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:5000", "--timeout", "300", "--worker-class", "gthread", "--threads", "2", "src.app:app"]
+CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:5000", "--timeout", "300", "--worker-class", "gthread", "--threads", "1", "src.app:app"]
