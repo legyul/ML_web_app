@@ -49,7 +49,6 @@ ENV LD_LIBRARY_PATH="/usr/local/hadoop/lib/native:$LD_LIBRARY_PATH"
 # Install requirement files
 RUN pip install --upgrade pip
 #RUN pip install --no-cache-dir pip setuptools wheel packaging Pillow pyparsing cycler
-RUN pip install --no-cache-dir numpy pandas scikit-learn matplotlib seaborn
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir --upgrade numpy pandas scikit-learn
