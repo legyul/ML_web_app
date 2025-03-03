@@ -6,25 +6,14 @@ gunicorn==21.2.0
 # AWS SDK
 boto3==1.34.111
 jmespath
+s3fs
 
 # Environment Variables
 python-dotenv==1.0.1
 
 # Machine Learning & Data Processing
-scikit-learn==1.2.2
-pandas
-numpy
 scipy
 joblib
-matplotlib
-seaborn
-s3fs
-
-# NLP & Text Processing
-nltk
-
-# Big Data Processing
-pySpark==3.5.2
 
 # Report Generation
 reportlab==4.0.7
@@ -36,10 +25,6 @@ sentence-transformers
 langchain
 
 # LoRA
-peft
-transformers
-datasets
-accelerate
 bitsandbytes
 trl
 auto-gptq
