@@ -13,12 +13,14 @@
 
     <label for="question">Ask a question:</label>
     <input type="text" id="question" placeholder="Enter your question" onkeypress="handleKeyPress(event)">
-    <button onclick="askQuestion()">Submit</button>
+    <button id="submit-btn" onclick="askQuestion()">Submit</button>
 
     <br><br>
 
     <h2>Response:</h2>
-    <p id="response" style="white-space: pre-line;"></p>  <!-- ✅ New Line Processing -->
+    <div id="response-container">
+        <p id="response" style="white-space: pre-line;"></p>  <!-- ✅ New Line Processing -->
+    </div>
 
     <div class="footer-container">
         {% include 'footer.html' %}
@@ -33,7 +35,12 @@
         // ✅ Display task information on the page
         document.getElementById("task-info").innerText = `Current Task: ${task}`;
 
-        // ✅ Submit a question when entering the "Enter" key
+        // ✅ Show a warning if filename is "unknown"
+        if (filename === "unknown") {
+            alert("⚠️ Warning: No file selected. Some features may not work properly.");
+        }
+
+        // ✅ Submit a question when pressing the "Enter" key
         function handleKeyPress(event) {
             if (event.key === "Enter") {
                 askQuestion();
@@ -41,15 +48,21 @@
         }
 
         async function askQuestion() {
-            let question = document.getElementById("question").value.trim();  // ✅ Remove space
+            let questionInput = document.getElementById("question");
+            let question = questionInput.value.trim();
+            let responseContainer = document.getElementById("response");
+            let submitBtn = document.getElementById("submit-btn");
 
-            // ✅ Deal with questions if they are not entered
+            // ✅ Prevent empty questions
             if (!question) {
                 alert("Please enter a question.");
                 return;
             }
 
-            document.getElementById("response").innerText = "Loading...";  // ✅ Load indication
+            // ✅ Show loading status and disable button
+            responseContainer.innerText = "Loading...";
+            submitBtn.disabled = true;
+            questionInput.disabled = true;
 
             try {
                 let response = await fetch("/ask", {
@@ -60,17 +73,26 @@
 
                 let result = await response.json();
 
-                // ✅ Response processing (including error messages)
+                // ✅ Handle responses and errors
                 if (result.response) {
-                    document.getElementById("response").innerText = result.response;
+                    responseContainer.innerText = result.response;
                 } else if (result.error) {
-                    document.getElementById("response").innerText = `Error: ${result.error}`;
+                    responseContainer.innerText = `❌ Error: ${result.error}`;
                 } else {
-                    document.getElementById("response").innerText = "Unexpected error occurred.";
+                    responseContainer.innerText = "❌ Unexpected error occurred.";
                 }
             } catch (error) {
-                document.getElementById("response").innerText = `Error: ${error.message}`;
+                responseContainer.innerText = `❌ Network Error: ${error.message}`;
+            } finally {
+                // ✅ Re-enable input field and button
+                submitBtn.disabled = false;
+                questionInput.disabled = false;
+                questionInput.value = "";  // ✅ Clear input field after submission
+                questionInput.focus();  // ✅ Auto-focus on input field
             }
+
+            // ✅ Scroll to the latest response
+            document.getElementById("response-container").scrollIntoView({ behavior: "smooth" });
         }
     </script>
 </body>

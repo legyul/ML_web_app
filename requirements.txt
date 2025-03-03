@@ -4,10 +4,7 @@ flask-swagger-ui==4.11.1
 gunicorn==21.2.0
 
 # AWS SDK
-s3transfer==0.10.1
-urllib3
 boto3==1.34.111
-botocore==1.34.111
 jmespath
 
 # Environment Variables
@@ -28,7 +25,6 @@ nltk
 
 # Big Data Processing
 pySpark==3.5.2
-py4j
 
 # Report Generation
 reportlab==4.0.7
@@ -48,8 +44,5 @@ bitsandbytes
 trl
 auto-gptq
 
-# GPT-3.5-Trubo API
+# GPT-3.5-Turbo API
 openai
-
-pytz
-python-dateutil

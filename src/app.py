@@ -13,7 +13,7 @@ import pandas as pd
 from fpdf import FPDF
 import pickle
 import torch
-from rag import ask_gpt_rag
+from rag import ask_model_rag, load_model_from_s3
 from lora_train import model, tokenizer
 
 # Load environment variables from .env file
@@ -413,22 +413,38 @@ def chat_interface():
 @app.route('/ask', methods=['POST'])
 def ask_question():
     data = request.json
-    task = data.get("task", "unknown")
+    task = data.get("task", "unknown")      # Clustering or Classification
     filename = data.get("filename", "unknown")
     question = data.get("question", "")
+    input_data = data.get("input_data", None)       # New data entered by the user
 
     # Search for documents related to questions using the RAG
-    relevant_data = ask_gpt_rag(question)
+    relevant_data = ask_model_rag(question)
+    context = f"Relevant Data: {relevant_data}" if relevant_data else "No relevant data found."
 
-    # Use MPT-7B (LoRA) models when certain keywords are included
-    if "classification" in task or "clustering" in task:
+    # Load Classification model and perform prediction
+    prediction = None
+    model_s3_key = f"result/{filename}_model_and_info.zip" if task == "classification" else None
+
+    if task == "classification" and input_data:
+        print(f"Using trained classification model for prediction: {model_s3_key}")
+        model = load_model_from_s3(model_s3_key)
+
+        if model:
+            prediction = model.predict([input_data])[0]
+            context += f"\n**Predicted Value:** {prediction}"
+
+    # Use MPT-7B (LoRA) (Classification / Clustering)
+    if task in ["classification", "clustering"]:
         print("Using MPT-7B (LoRA)")
-        inputs = tokenizer(question, return_tensors="pt").to("cpu")
+        full_input = f"{context}\n\nQuestion: {question}"
+        inputs = tokenizer(full_input, return_tensors="pt").to("cpu")
 
         with torch.no_grad():
-            output = model.generate(**inputs, max_length=100)
+            output = model.generate(**inputs, max_length=150)
         response_text = tokenizer.decode(output[0], skip_special_tokens=True)
-        return jsonify({"response": response_text})
+
+        return jsonify({"response": response_text, "prediction": prediction})
     
     # Common Questions Use GPT-3.5-Turbo
     else:
