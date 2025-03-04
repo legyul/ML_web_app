@@ -16,8 +16,8 @@ from pyspark.sql import functions as F
 
 
 load_dotenv()
-os.environ["JAVA_HOME"] = '/usr/lib/jvm/java-11-openjdk-amd64'
-os.environ["SPARK_HOME"] = '/usr/local/spark'
+# os.environ["JAVA_HOME"] = '/usr/lib/jvm/java-11-openjdk-amd64'
+# os.environ["SPARK_HOME"] = '/usr/local/spark'
 
 spark = SparkSession.builder.appName("DataPreprocessing").getOrCreate()
 
