@@ -31,12 +31,12 @@ if not app.secret_key:
     raise ValueError("FLASK_SECRET_KEY is not set! Set the environment variable before running the app.")
 
 # Setting the port that Spark UI uses
-# 메모리 사용 제한 (기본 512MB -> 1GB)
-# ✅ 실행자 메모리 제한
-# ✅ 네트워크 Timeout 문제 해결
+# Memory usage limit (default 512MB -> 1GB)
+# Executor Memory Limit
+# Troubleshooting Network Timeout
 conf = SparkConf() \
     .setAppName("DataPreprocessing") \
-    .setMaster("local[*]") \
+    .setMaster("local[1]") \
     .set("spark.driver.memory", "1g")  \
     .set("spark.executor.memory", "512m") \
     .set("spark.network.timeout", "300s") \

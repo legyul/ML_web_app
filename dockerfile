@@ -81,6 +81,8 @@ RUN python3.11 -m pip install --no-cache-dir numpy pandas scikit-learn matplotli
     python3.11 -m pip install --no-cache-dir pyspark nltk peft transformers datasets accelerate && \
     rm -rf /root/.cache/pip
 
+RUN yum install -y procps && yum clean all
+
 # COPY requirements.txt .
 # RUN pip install --no-cache-dir -r requirements.txt
 # RUN pip install --no-cache-dir --upgrade numpy pandas scikit-learn
