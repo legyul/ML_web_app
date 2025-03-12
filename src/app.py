@@ -37,8 +37,9 @@ if not app.secret_key:
 conf = SparkConf() \
     .setAppName("DataPreprocessing") \
     .setMaster("local[1]") \
-    .set("spark.driver.memory", "1g")  \
-    .set("spark.executor.memory", "512m") \
+    .set("spark.driver.memory", "2g")  \
+    .set("spark.executor.memory", "2g") \
+    .config("spark.driver.maxResultSize", "1g") \
     .set("spark.executor.heartbeatInterval", "30s") \
     .set("spark.network.timeout", "120s")
 

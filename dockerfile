@@ -38,6 +38,10 @@ ENV PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
 ENV PYSPARK_PYTHON=python3
 ENV PYSPARK_DRIVER_PYTHON=python3
 
+ENV SPARK_WORKER_MEMORY=2g
+ENV SPARK_DRIVER_MEMORY=2g
+ENV SPARK_EXECUTOR_MEMORY=2g
+
 
 # Download and install OpenJDK 11 (Adoptium Temurin JDK)
 # RUN mkdir -p /usr/lib/jvm && \
