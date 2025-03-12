@@ -39,8 +39,8 @@ conf = SparkConf() \
     .setMaster("local[1]") \
     .set("spark.driver.memory", "1g")  \
     .set("spark.executor.memory", "512m") \
-    .set("spark.network.timeout", "300s") \
-    .set("spark.executor.heartbeatInterval", "60s")
+    .set("spark.executor.heartbeatInterval", "30s") \
+    .set("spark.network.timeout", "120s")
 
 if SparkContext._active_spark_context:
     SparkContext._active_spark_context.stop()

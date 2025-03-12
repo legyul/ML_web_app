@@ -23,7 +23,7 @@ RUN yum update -y && yum install -y --allowerasing \
 
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 # ENV PATH="${JAVA_HOME}/bin:${PATH}"
-ENV JAVA_HOME=/usr/lib/jvm/java-11-amazon-corretto.x86_64
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 # Install Spark
@@ -58,12 +58,6 @@ RUN mkdir -p /usr/local/hadoop/lib/native && \
     tar -xzf hadoop.tar.gz && \
     mv hadoop-3.3.6/lib/native/* /usr/local/hadoop/lib/native/ && \
     rm -rf hadoop-3.3.6 hadoop.tar.gz
-# RUN mkdir -p /usr/local/hadoop/lib/native && \
-#     cd /usr/local/hadoop/lib/native && \
-#     curl -O https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz && \
-#     tar -xvzf hadoop-3.3.6.tar.gz && \
-#     mv hadoop-3.3.6/lib/native/* /usr/local/hadoop/lib/native/ && \
-#     rm -rf hadoop-3.3.6 hadoop-3.3.6.tar.gz
 
 # Set Hadoop environment variables
 ENV HADOOP_OPTS="-Djava.library.path=/usr/local/hadoop/lib/native"
@@ -75,6 +69,7 @@ RUN python3.11 -m pip install --upgrade pip
 # RUN pip install --upgrade pip
 #RUN pip install --no-cache-dir pip setuptools wheel packaging Pillow pyparsing cycler
 
+RUN yum install -y procps && yum clean all
 
 # Install essential Python libraries (미리 설치)
 RUN python3.11 -m pip install --no-cache-dir numpy pandas scikit-learn matplotlib seaborn && \
@@ -82,10 +77,6 @@ RUN python3.11 -m pip install --no-cache-dir numpy pandas scikit-learn matplotli
     rm -rf /root/.cache/pip
 
 RUN yum install -y procps && yum clean all
-
-# COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
-# RUN pip install --no-cache-dir --upgrade numpy pandas scikit-learn
 
 # Copy all files in the current directory to /app in the container
 COPY ./src /app/src
@@ -96,20 +87,6 @@ COPY requirements.txt /app/
 # Install remaining dependencies from requirements.txt
 RUN python3.11 -m pip install --no-cache-dir -r requirements.txt && \
     rm -rf /root/.cache/pip
-
-
-#RUN export $(cat .env | xargs)
-
-
-
-# Download necessary nltk resources
-#RUN python -m nltk.downloader stopwords punkt
-
-# Set Flask environment
-#ENV FLASK_APP=src/app.py
-
-# # 5. Expose port 5000 for access from outside the container
-# EXPOSE 80
 
 # 7. Run Flask server
 CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:5000", "--timeout", "300", "--worker-class", "gthread", "--threads", "1", "src.app:app"]
