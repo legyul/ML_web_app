@@ -23,7 +23,7 @@ RUN yum update -y && yum install -y --allowerasing \
 
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 # ENV PATH="${JAVA_HOME}/bin:${PATH}"
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-11-amazon-corretto.x86_64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 # Install Spark
