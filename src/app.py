@@ -37,11 +37,13 @@ if not app.secret_key:
 conf = SparkConf() \
     .setAppName("DataPreprocessing") \
     .setMaster("local[1]") \
-    .set("spark.driver.memory", "2g")  \
-    .set("spark.executor.memory", "2g") \
-    .config("spark.driver.maxResultSize", "1g") \
+    .set("spark.driver.memory", "1g")  \
+    .set("spark.executor.memory", "1g") \
+    .config("spark.driver.maxResultSize", "500m") \
     .set("spark.executor.heartbeatInterval", "30s") \
-    .set("spark.network.timeout", "120s")
+    .set("spark.network.timeout", "120s") \
+    .set("spark.sql.shuffle.partitions", "10") \
+    .set("spark.sql.execution.arrow.enabled", "true") 
 
 if SparkContext._active_spark_context:
     SparkContext._active_spark_context.stop()

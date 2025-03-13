@@ -19,7 +19,14 @@ load_dotenv()
 # os.environ["JAVA_HOME"] = '/usr/lib/jvm/java-11-openjdk-amd64'
 # os.environ["SPARK_HOME"] = '/usr/local/spark'
 
-spark = SparkSession.builder.appName("DataPreprocessing").getOrCreate()
+spark = SparkSession.builder \
+    .appName("DataPreprocessing") \
+    .config("spark.master", "local[1]") \
+    .config("spark.driver.memory", "1g") \
+    .config("spark.executor.memory", "1g") \
+    .config("spark.driver.maxResultSize", "500m") \
+    .config("spark.sql.shuffle.partitions", "10") \
+    .getOrCreate()
 
 S3_BUCKET_NAME = "ml-platform-service"
 
