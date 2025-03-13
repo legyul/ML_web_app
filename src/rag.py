@@ -31,7 +31,7 @@ client = openai.Client(api_key=OPENAI_API_KEY)
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # Create ChromaDB Client (vector DB)
-chroma_client = chromadb.PersistentClient(path="./chroma_db")
+chroma_client = chromadb.PersistentClient(path="/app/chroma_db")
 collection = chroma_client.get_or_create_collection(name="ml_data")
 
 def load_model_from_s3(zip_s3_key):

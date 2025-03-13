@@ -39,11 +39,11 @@ conf = SparkConf() \
     .setMaster("local[1]") \
     .set("spark.driver.memory", "1g")  \
     .set("spark.executor.memory", "1g") \
-    .config("spark.driver.maxResultSize", "500m") \
+    .config("spark.driver.maxResultSize", "512m") \
     .set("spark.executor.heartbeatInterval", "30s") \
-    .set("spark.network.timeout", "120s") \
-    .set("spark.sql.shuffle.partitions", "10") \
-    .set("spark.sql.execution.arrow.enabled", "true") 
+    .set("spark.network.timeout", "60s") #\
+    # .set("spark.sql.shuffle.partitions", "10") \
+    # .set("spark.sql.execution.arrow.enabled", "true") 
 
 if SparkContext._active_spark_context:
     SparkContext._active_spark_context.stop()

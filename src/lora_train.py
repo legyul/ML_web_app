@@ -3,7 +3,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model
 import os
 
-MODEL_NAME = "mosaicml/mpt-7b"
+MODEL_NAME = "mistralai/Mistral-7B-v0.1"
 
 # Load tokenizer
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
