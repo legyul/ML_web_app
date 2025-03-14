@@ -8,6 +8,7 @@ import boto3
 from dotenv import load_dotenv
 from flask_swagger_ui import get_swaggerui_blueprint
 from pyspark import SparkConf, SparkContext
+from pyspark.sql import SparkSession
 import io
 import pandas as pd
 from fpdf import FPDF
@@ -37,18 +38,18 @@ if not app.secret_key:
 conf = SparkConf() \
     .setAppName("DataPreprocessing") \
     .setMaster("local[1]") \
-    .set("spark.driver.memory", "1g")  \
-    .set("spark.executor.memory", "1g") \
-    .config("spark.driver.maxResultSize", "512m") \
-    .set("spark.executor.heartbeatInterval", "30s") \
-    .set("spark.network.timeout", "60s") #\
+    .set("spark.driver.memory", "512m")  \
+    .set("spark.executor.memory", "512m") \
+    .config("spark.driver.maxResultSize", "256m") \
+    .set("spark.executor.heartbeatInterval", "20s") \
+    .set("spark.network.timeout", "60s") \
     # .set("spark.sql.shuffle.partitions", "10") \
     # .set("spark.sql.execution.arrow.enabled", "true") 
 
 if SparkContext._active_spark_context:
     SparkContext._active_spark_context.stop()
 
-sc = SparkContext.getOrCreate(conf=conf)
+sc = SparkSession.builder.config(conf=conf).getOrCreate()
 
 S3_REGION = "us-east-2"
 # S3 Client configuration
