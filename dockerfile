@@ -66,6 +66,9 @@ RUN mkdir -p /usr/local/hadoop/lib/native && \
 # Set Hadoop environment variables
 ENV HADOOP_OPTS="-Djava.library.path=/usr/local/hadoop/lib/native"
 ENV LD_LIBRARY_PATH="/usr/local/hadoop/lib/native:$LD_LIBRARY_PATH"
+ENV HF_HOME=/app/hf_cache
+
+ENV TMPDIR=/var/tmp
 
 # Install requirement files
 # Upgrade pip
