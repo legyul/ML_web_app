@@ -34,6 +34,8 @@ embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 chroma_client = chromadb.PersistentClient(path="/app/chroma_db")
 collection = chroma_client.get_or_create_collection(name="ml_data")
 
+os.environ["HF_HOME"] = "/tmp/huggingface"
+
 def load_model_from_s3(zip_s3_key):
     '''
     Download the saved model from S3 and unzip it to load it.
