@@ -70,6 +70,22 @@ ENV HF_HOME=/app/hf_cache
 
 ENV TMPDIR=/var/tmp
 
+# Install GCC 13.2.0
+RUN mkdir -p /usr/local/gcc-src /usr/local/gcc-build && \
+    cd /usr/local/gcc-src && \
+    wget http://ftp.gnu.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.gz && \
+    tar -xvzf gcc-13.2.0.tar.gz && \
+    cd gcc-13.2.0 && \
+    ./contrib/download_prerequisites && \
+    cd /usr/local/gcc-build && \
+    /usr/local/gcc-src/gcc-13.2.0/configure --enable-languages=c,c++ --disable-multilib --prefix=/usr/local/gcc-13.2.0 && \
+    make -j$(nproc) && \
+    make install
+
+# 2. GCC 13.2.0 환경 변수 설정
+ENV PATH="/usr/local/gcc-13.2.0/bin:${PATH}"
+ENV LD_LIBRARY_PATH="/usr/local/gcc-13.2.0/lib64:${LD_LIBRARY_PATH}"
+
 # Install requirement files
 # Upgrade pip
 RUN python3.11 -m pip install --upgrade pip
@@ -84,6 +100,7 @@ RUN python3.11 -m pip install --no-cache-dir numpy pandas scikit-learn matplotli
     rm -rf /root/.cache/pip
 
 RUN yum install -y procps && yum clean all
+RUN pip install bitsandbytes --no-cache-dir --force-reinstall
 
 # Copy all files in the current directory to /app in the container
 COPY ./src /app/src

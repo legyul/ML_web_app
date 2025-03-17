@@ -6,15 +6,17 @@ import os
 MODEL_NAME = "mistralai/Mistral-7B-v0.1"
 HF_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
 
+bnb_config = {"load_in_8bit": False, "load_in_4bit": False} # Enable to run on CPU
+
 # Load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, use_auth_token=HF_TOKEN)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, token=HF_TOKEN)
 
 # Load model (Save memory by applying 4-bit quantization)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
     load_in_4bit=True,  # 4-bit quantization
     device_map="auto",
-    use_auth_token=HF_TOKEN
+    token=HF_TOKEN
 )
 
 # LoRA settings (set to work on CPU as well)
