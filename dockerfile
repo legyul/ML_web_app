@@ -74,15 +74,7 @@ ENV TMPDIR=/var/tmp
 RUN yum install -y wget tar bzip2 gzip xz make gcc gcc-c++ gmp-devel mpfr-devel libmpc-devel
 
 # Build GCC
-RUN mkdir -p /usr/local/gcc-src /usr/local/gcc-build && chmod 777 /usr/local/gcc-src /usr/local/gcc-build && \
-    cd /usr/local/gcc-src && \
-    wget http://ftp.gnu.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.gz && \
-    tar -xvzf gcc-13.2.0.tar.gz && \
-    cd gcc-13.2.0 && \
-    ./contrib/download_prerequisites && \
-    cd /usr/local/gcc-build && \
-    /usr/local/gcc-src/gcc-13.2.0/configure --enable-languages=c,c++ --disable-multilib --prefix=/usr/local/gcc-13.2.0 && \
-    make -j2 && make install
+RUN yum install -y gcc gcc-c++ libstdc++-devel
 
 # Set environment
 ENV PATH="/usr/local/gcc-13.2.0/bin:${PATH}"
