@@ -71,7 +71,10 @@ ENV HF_HOME=/app/hf_cache
 ENV TMPDIR=/var/tmp
 
 # Install GCC 13.2.0
-RUN mkdir -p /usr/local/gcc-src /usr/local/gcc-build && \
+RUN yum install -y wget tar bzip2 gzip xz make gcc gcc-c++ gmp-devel mpfr-devel libmpc-devel
+
+# Build GCC
+RUN mkdir -p /usr/local/gcc-src /usr/local/gcc-build && chmod 777 /usr/local/gcc-src /usr/local/gcc-build && \
     cd /usr/local/gcc-src && \
     wget http://ftp.gnu.org/gnu/gcc/gcc-13.2.0/gcc-13.2.0.tar.gz && \
     tar -xvzf gcc-13.2.0.tar.gz && \
@@ -79,10 +82,9 @@ RUN mkdir -p /usr/local/gcc-src /usr/local/gcc-build && \
     ./contrib/download_prerequisites && \
     cd /usr/local/gcc-build && \
     /usr/local/gcc-src/gcc-13.2.0/configure --enable-languages=c,c++ --disable-multilib --prefix=/usr/local/gcc-13.2.0 && \
-    make -j$(nproc) && \
-    make install
+    make -j2 && make install
 
-# 2. GCC 13.2.0 환경 변수 설정
+# Set environment
 ENV PATH="/usr/local/gcc-13.2.0/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/usr/local/gcc-13.2.0/lib64:${LD_LIBRARY_PATH}"
 
