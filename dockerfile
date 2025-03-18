@@ -94,7 +94,7 @@ RUN python3.11 -m pip install --no-cache-dir numpy pandas scikit-learn matplotli
     rm -rf /root/.cache/pip
 
 RUN yum install -y procps && yum clean all
-RUN pip install --no-cache-dir bitsandbytes --no-deps
+RUN pip uninstall -y bitsandbytes
 
 # Copy all files in the current directory to /app in the container
 COPY ./src /app/src

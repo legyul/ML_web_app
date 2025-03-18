@@ -14,6 +14,8 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, token=HF_TOKEN)
 # Load model (Save memory by applying 4-bit quantization)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
+    device_map='cpu',
+    torch_dtype=torch.float32,
     quantization_config=bnb_config,
     token=HF_TOKEN
 )
