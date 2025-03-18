@@ -23,12 +23,12 @@ RUN yum update -y && yum install -y --allowerasing \
     binutils \
     && yum clean all
 
-RUN rm -f /lib64/libstdc++.so.6 && \
-    ln -s /usr/lib64/libstdc++.so.6 /lib64/libstdc++.so.6 && \
-    strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX
+RUN yum reinstall -y libstdc++ libstdc++-devel
 
-RUN find /usr -name "libstdc++.so.6" && \
-    ls -l /usr/lib64/libstdc++.so.*
+RUN ls -l /usr/lib64/ | grep libstdc++
+
+RUN rm -f /lib64/libstdc++.so.6 && \
+    ln -s /usr/lib64/libstdc++.so.6 /lib64/libstdc++.so.6
 
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 # ENV PATH="${JAVA_HOME}/bin:${PATH}"
