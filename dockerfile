@@ -69,6 +69,7 @@ RUN python3.11 -m pip install --upgrade pip
 RUN yum install -y wget tar bzip2 gzip xz make gmp-devel mpfr-devel libmpc-devel
 
 # Install essential Python libraries
+ENV TMPDIR=/var/tmp
 RUN python3.11 -m pip install --no-cache-dir numpy pandas scikit-learn matplotlib seaborn && \
     python3.11 -m pip install --no-cache-dir pyspark nltk peft transformers datasets accelerate && \
     rm -rf /root/.cache/pip
