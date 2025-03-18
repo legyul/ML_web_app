@@ -19,13 +19,15 @@ RUN yum update -y && yum install -y --allowerasing \
     gcc \
     gcc-c++ \
     make \
-    libstdc++-devel \
     glibc-devel \
+    libstdc++ \
+    libstdc++-devel \
     && yum clean all
 
-RUN yum install -y libstdc++ libstdc++-devel && \
-    ln -sf /usr/lib64/libstdc++.so.6 /lib64/libstdc++.so.6 && \
-    strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX
+RUN alternatives --install /usr/bin/gcc gcc /usr/bin/gcc 100 && \
+    alternatives --install /usr/bin/g++ g++ /usr/bin/g++ 100 && \
+    alternatives --install /usr/lib64/libstdc++.so.6 libstdc++.so.6 /usr/lib64/libstdc++.so.6 100 && \
+    strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX || true
 
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 # ENV PATH="${JAVA_HOME}/bin:${PATH}"
