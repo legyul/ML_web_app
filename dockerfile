@@ -24,11 +24,13 @@ RUN yum update -y && yum install -y --allowerasing \
     && yum clean all
 
 RUN rm -f /lib64/libstdc++.so.6 && \
-    yum reinstall -y libstdc++ libstdc++-devel && \
+    yum remove -y libstdc++ libstdc++-devel gcc gcc-c++ && \
+    yum install -y gcc gcc-c++ libstdc++ libstdc++-devel && \
     ln -s /usr/lib64/libstdc++.so.6 /lib64/libstdc++.so.6 && \
     ldconfig
 
-RUN strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX
+RUN ls -l /usr/lib64/ | grep libstdc++ && \
+    strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX
 
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 # ENV PATH="${JAVA_HOME}/bin:${PATH}"
