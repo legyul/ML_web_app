@@ -5,8 +5,6 @@ FROM amazonlinux:latest
 WORKDIR /app
 ENV PYTHONPATH=/app/src
 
-RUN rm -rf /usr/lib64/libstdc++.so.6* || true
-
 # Install dependencies
 RUN yum update -y && yum install -y --allowerasing \
     python3.11 \
