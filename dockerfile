@@ -24,9 +24,11 @@ RUN yum update -y && yum install -y --allowerasing \
     libstdc++-devel \
     && yum clean all
 
-RUN ln -s $(ls /usr/lib64/libstdc++.so.6.* | sort -V | tail -n 1) /usr/lib64/libstdc++.so.6
+RUN ln -sf /usr/lib64/libstdc++.so.6 /lib64/libstdc++.so.6 && \
+    strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX
 
-RUN strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX || true
+RUN find /usr -name "libstdc++.so.6" && \
+    ls -l /usr/lib64/libstdc++.so.*
 
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 # ENV PATH="${JAVA_HOME}/bin:${PATH}"
