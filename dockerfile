@@ -23,7 +23,8 @@ RUN yum update -y && yum install -y --allowerasing \
     binutils \
     && yum clean all
 
-RUN ln -sf /usr/lib64/libstdc++.so.6 /lib64/libstdc++.so.6 && \
+RUN rm -f /lib64/libstdc++.so.6 && \
+    ln -s /usr/lib64/libstdc++.so.6 /lib64/libstdc++.so.6 && \
     strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX
 
 RUN find /usr -name "libstdc++.so.6" && \
