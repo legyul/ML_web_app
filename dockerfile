@@ -20,6 +20,7 @@ RUN yum update -y && yum install -y --allowerasing \
     glibc-devel \
     libstdc++ \
     libstdc++-devel \
+    binutils \
     && yum clean all
 
 RUN ln -sf /usr/lib64/libstdc++.so.6 /lib64/libstdc++.so.6 && \
