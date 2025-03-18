@@ -6,7 +6,11 @@ WORKDIR /app
 ENV PYTHONPATH=/app/src
 
 # Install dependencies
-RUN yum update -y && yum install -y \
+RUN amazon-linux-extras enable corretto11 && \
+    yum clean metadata && \
+    yum makecache && \
+    yum update -y && \
+    yum install -y \
     python3.11 python3.11-pip python3.11-devel \
     java-11-amazon-corretto \
     tar gzip wget curl git shadow-utils \
