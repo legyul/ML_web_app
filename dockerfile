@@ -23,16 +23,9 @@ RUN yum update -y && yum install -y --allowerasing \
     glibc-devel \
     && yum clean all
 
-RUN wget http://ftp.gnu.org/gnu/libstdc++/libstdc++-v3.4.32.tar.gz -O /tmp/libstdc++.tar.gz && \
-    tar -xzf /tmp/libstdc++.tar.gz -C /tmp && \
-    cd /tmp/libstdc++-v3.4.32 && \
-    ./configure --prefix=/usr && \
-    make -j$(nproc) && \
-    make install && \
-    rm -rf /tmp/libstdc++*
-
-# Ensure `libstdc++.so.6` is correctly linked
-RUN ln -sf /usr/lib64/libstdc++.so.6 /lib64/libstdc++.so.6
+RUN yum install -y libstdc++ libstdc++-devel && \
+    ln -sf /usr/lib64/libstdc++.so.6 /lib64/libstdc++.so.6 && \
+    strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX
 
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 # ENV PATH="${JAVA_HOME}/bin:${PATH}"
