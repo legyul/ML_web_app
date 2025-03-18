@@ -6,16 +6,20 @@ WORKDIR /app
 ENV PYTHONPATH=/app/src
 
 # Install dependencies
-RUN amazon-linux-extras enable corretto11 && \
-    yum clean metadata && \
-    yum makecache && \
-    yum update -y && \
-    yum install -y \
-    python3.11 python3.11-pip python3.11-devel \
+RUN yum update -y && yum install -y --allowerasing \
+    python3.11 \
+    python3.11-pip \
+    python3.11-devel \
+    tar \
+    gzip \
+    wget \
+    curl \
+    shadow-utils \
     java-11-amazon-corretto \
-    tar gzip wget curl git shadow-utils \
-    make gcc gcc-c++ libstdc++-devel \
-    procps \
+    gcc \
+    gcc-c++ \
+    make \
+    libstdc++-devel \
     && yum clean all
 
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
