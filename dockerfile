@@ -22,6 +22,15 @@ RUN yum update -y && yum install -y --allowerasing \
     libstdc++-devel \
     && yum clean all
 
+RUN cd /usr/local/src && \
+    wget http://ftp.gnu.org/gnu/libstdc++/libstdc++-v3.4.32.tar.gz && \
+    tar -xzf libstdc++-v3.4.32.tar.gz && \
+    cd libstdc++-v3.4.32 && \
+    ./configure --prefix=/usr && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf /usr/local/src/libstdc++-v3.4.32*
+
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 # ENV PATH="${JAVA_HOME}/bin:${PATH}"
 ENV JAVA_HOME=/usr/lib/jvm/java-11-amazon-corretto.x86_64
@@ -58,13 +67,6 @@ ENV TMPDIR=/var/tmp
 
 # Install GCC 13.2.0
 RUN yum install -y wget tar bzip2 gzip xz make gmp-devel mpfr-devel libmpc-devel
-
-# Build GCC
-RUN yum install -y gcc gcc-c++ libstdc++-devel
-
-# Set environment
-ENV PATH="/usr/local/gcc-13.2.0/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/usr/local/gcc-13.2.0/lib64:${LD_LIBRARY_PATH}"
 
 # Install requirement files
 # Upgrade pip
