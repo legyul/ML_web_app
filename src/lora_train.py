@@ -6,7 +6,7 @@ import os
 MODEL_NAME = "mistralai/Mistral-7B-v0.1"
 HF_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
 
-bnb_config = BitsAndBytesConfig(load_in_8bit = False, load_in_4bit = False) # Enable to run on CPU
+#bnb_config = BitsAndBytesConfig(load_in_8bit = False, load_in_4bit = True) # Enable to run on CPU
 
 # Load tokenizer
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, token=HF_TOKEN)
@@ -14,9 +14,9 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, token=HF_TOKEN)
 # Load model (Save memory by applying 4-bit quantization)
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    device_map='cpu',
-    torch_dtype=torch.float32,
-    quantization_config=bnb_config,
+    # device_map='cpu',
+    # torch_dtype=torch.float32,
+    # quantization_config=bnb_config,
     token=HF_TOKEN
 )
 
