@@ -88,5 +88,13 @@ COPY requirements.txt /app/
 RUN python3.11 -m pip install --no-cache-dir -r requirements.txt && \
     rm -rf /root/.cache/pip
 
+ENV HF_HUB_CACHE="/tmp/hf_cache"
+ENV TRANSFORMERS_CACHE="/tmp/hf_cache"
+ENV HF_DATASETS_CACHE="/tmp/hf_cache"
+
+# Clean up unnecessary files whenever a container runs
+RUN echo '#!/bin/sh\nrm -rf /tmp/* /var/tmp/* /root/.cache/pip ~/.cache/pip' > /usr/local/bin/clean_tmp && \
+    chmod +x /usr/local/bin/clean_tmp
+
 # 7. Run Flask server
-CMD ["gunicorn", "-w", "1", "-b", "0.0.0.0:5000", "--timeout", "300", "--worker-class", "gthread", "--threads", "1", "src.app:app"]
+CMD ["sh", "-c", "/usr/local/bin/clean_tmp && exec gunicorn -w 1 -b 0.0.0.0:5000 --timeout 300 --worker-class gthread --threads 1 src.app:app"]
