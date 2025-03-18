@@ -1,24 +1,17 @@
-# Use Python 3.11 for base image
-# FROM python:3.11
 # Use Amazon Linux 2023 with Python 3.11
-FROM amazonlinux:2023
+FROM amazonlinux:latest
 
 # Set /app for working directory in the container
 WORKDIR /app
-
 ENV PYTHONPATH=/app/src
 
 # Install dependencies
-RUN yum update -y && yum install -y --allowerasing \
-    python3.11 \
-    python3.11-pip \
-    python3.11-devel \
-    tar \
-    gzip \
-    wget \
-    curl \
-    shadow-utils \
+RUN yum update -y && yum install -y \
+    python3.11 python3.11-pip python3.11-devel \
     java-11-amazon-corretto \
+    tar gzip wget curl git shadow-utils \
+    make gcc gcc-c++ libstdc++-devel \
+    procps \
     && yum clean all
 
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
@@ -42,20 +35,6 @@ ENV SPARK_WORKER_MEMORY=2g
 ENV SPARK_DRIVER_MEMORY=2g
 ENV SPARK_EXECUTOR_MEMORY=2g
 
-
-# Download and install OpenJDK 11 (Adoptium Temurin JDK)
-# RUN mkdir -p /usr/lib/jvm && \
-#     curl -fsSL https://download.java.net/openjdk/jdk11/ri/openjdk-11+28_linux-x64_bin.tar.gz -o jdk11.tar.gz && \
-#     tar -xzf jdk11.tar.gz -C /usr/lib/jvm && \
-#     mv /usr/lib/jvm/jdk-11 /usr/lib/jvm/java-11-openjdk-amd64 && \
-#     rm jdk11.tar.gz
-
-# Install Spark
-# RUN curl -O https://archive.apache.org/dist/spark/spark-3.5.2/spark-3.5.2-bin-hadoop3.tgz \
-#     && tar -xvzf spark-3.5.2-bin-hadoop3.tgz \
-#     && mv spark-3.5.2-bin-hadoop3 /usr/local/spark \
-#     && rm spark-3.5.2-bin-hadoop3.tgz
-
 # Install Hadoop Native Library
 RUN mkdir -p /usr/local/hadoop/lib/native && \
     wget -q https://downloads.apache.org/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz -O hadoop.tar.gz && \
@@ -67,7 +46,6 @@ RUN mkdir -p /usr/local/hadoop/lib/native && \
 ENV HADOOP_OPTS="-Djava.library.path=/usr/local/hadoop/lib/native"
 ENV LD_LIBRARY_PATH="/usr/local/hadoop/lib/native:$LD_LIBRARY_PATH"
 ENV HF_HOME=/app/hf_cache
-
 ENV TMPDIR=/var/tmp
 
 # Install GCC 13.2.0
@@ -83,8 +61,6 @@ ENV LD_LIBRARY_PATH="/usr/local/gcc-13.2.0/lib64:${LD_LIBRARY_PATH}"
 # Install requirement files
 # Upgrade pip
 RUN python3.11 -m pip install --upgrade pip
-# RUN pip install --upgrade pip
-#RUN pip install --no-cache-dir pip setuptools wheel packaging Pillow pyparsing cycler
 
 RUN yum install -y procps && yum clean all
 
@@ -94,7 +70,7 @@ RUN python3.11 -m pip install --no-cache-dir numpy pandas scikit-learn matplotli
     rm -rf /root/.cache/pip
 
 RUN yum install -y procps && yum clean all
-RUN pip uninstall -y bitsandbytes
+RUN pip uninstall -y bitsandbytes || true
 
 # Copy all files in the current directory to /app in the container
 COPY ./src /app/src

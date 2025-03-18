@@ -25,7 +25,6 @@ sentence-transformers
 langchain
 
 # LoRA
-#bitsandbytes
 trl
 auto-gptq
 
