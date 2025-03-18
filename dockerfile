@@ -71,7 +71,7 @@ ENV HF_HOME=/app/hf_cache
 ENV TMPDIR=/var/tmp
 
 # Install GCC 13.2.0
-RUN yum install -y wget tar bzip2 gzip xz make gcc gcc-c++ gmp-devel mpfr-devel libmpc-devel
+RUN yum install -y wget tar bzip2 gzip xz make gmp-devel mpfr-devel libmpc-devel
 
 # Build GCC
 RUN yum install -y gcc gcc-c++ libstdc++-devel
@@ -88,13 +88,13 @@ RUN python3.11 -m pip install --upgrade pip
 
 RUN yum install -y procps && yum clean all
 
-# Install essential Python libraries (미리 설치)
+# Install essential Python libraries
 RUN python3.11 -m pip install --no-cache-dir numpy pandas scikit-learn matplotlib seaborn && \
     python3.11 -m pip install --no-cache-dir pyspark nltk peft transformers datasets accelerate && \
     rm -rf /root/.cache/pip
 
 RUN yum install -y procps && yum clean all
-RUN pip install bitsandbytes --no-cache-dir --force-reinstall
+RUN pip install --no-cache-dir bitsandbytes --no-deps
 
 # Copy all files in the current directory to /app in the container
 COPY ./src /app/src
