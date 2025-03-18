@@ -6,6 +6,8 @@ import os
 MODEL_NAME = "mistralai/Mistral-7B-v0.1"
 HF_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
 
+os.environ["HF_HOME"] = "/tmp/hg_cache"
+
 #bnb_config = BitsAndBytesConfig(load_in_8bit = False, load_in_4bit = True) # Enable to run on CPU
 
 # Load tokenizer
