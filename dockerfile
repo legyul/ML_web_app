@@ -28,6 +28,8 @@ RUN yum reinstall -y libstdc++ libstdc++-devel
 RUN ls -l /usr/lib64/ | grep libstdc++
 
 RUN rm -f /lib64/libstdc++.so.6 && \
+    yum reinstall -y libstdc++ libstdc++-devel && \
+    ls -l /usr/lib64/ | grep libstdc++ && \
     ln -s /usr/lib64/libstdc++.so.6 /lib64/libstdc++.so.6
 
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
