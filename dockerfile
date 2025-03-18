@@ -5,6 +5,8 @@ FROM amazonlinux:latest
 WORKDIR /app
 ENV PYTHONPATH=/app/src
 
+RUN rm -rf /usr/lib64/libstdc++.so.6* || true
+
 # Install dependencies
 RUN yum update -y && yum install -y --allowerasing \
     python3.11 \
@@ -16,18 +18,15 @@ RUN yum update -y && yum install -y --allowerasing \
     curl \
     shadow-utils \
     java-11-amazon-corretto \
-    gcc \
-    gcc-c++ \
     make \
     glibc-devel \
     libstdc++ \
     libstdc++-devel \
     && yum clean all
 
-RUN alternatives --install /usr/bin/gcc gcc /usr/bin/gcc 100 && \
-    alternatives --install /usr/bin/g++ g++ /usr/bin/g++ 100 && \
-    alternatives --install /usr/lib64/libstdc++.so.6 libstdc++.so.6 /usr/lib64/libstdc++.so.6 100 && \
-    strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX || true
+RUN ln -s $(ls /usr/lib64/libstdc++.so.6.* | sort -V | tail -n 1) /usr/lib64/libstdc++.so.6
+
+RUN strings /usr/lib64/libstdc++.so.6 | grep GLIBCXX || true
 
 # ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 # ENV PATH="${JAVA_HOME}/bin:${PATH}"
