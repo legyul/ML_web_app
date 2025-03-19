@@ -1,9 +1,9 @@
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModel, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import LoraConfig, get_peft_model
 import os
 
-MODEL_NAME = "mistralai/Mistral-7B-v0.1"
+MODEL_NAME = "TheBloke/Mistral-7B-Instruct-v0.2-GGUF"
 HF_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
 
 os.environ["HF_HOME"] = "/tmp/hg_cache"
@@ -13,14 +13,8 @@ os.environ["HF_HOME"] = "/tmp/hg_cache"
 # Load tokenizer
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, token=HF_TOKEN)
 
-# Load model (Save memory by applying 4-bit quantization)
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_NAME,
-    # device_map='cpu',
-    # torch_dtype=torch.float32,
-    # quantization_config=bnb_config,
-    token=HF_TOKEN
-)
+# Load model
+model = AutoModel.from_pretrained(MODEL_NAME, token=HF_TOKEN)
 
 # LoRA settings (set to work on CPU as well)
 lora_config = LoraConfig(
