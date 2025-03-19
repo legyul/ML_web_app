@@ -3,7 +3,7 @@ import torch
 from peft import LoraConfig, get_peft_model
 import os
 
-MODEL_NAME = "mosaicml/mpt-500m"
+MODEL_NAME = "mosaicml/mpt-1b-redpajama-200b"
 HF_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
 
 os.environ["HF_HOME"] = "/tmp/hg_cache"
