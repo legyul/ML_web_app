@@ -3,7 +3,7 @@ import torch
 from peft import LoraConfig, get_peft_model
 import os
 
-MODEL_NAME = "mosaicml/mpt-1b-redpajama-200b"
+MODEL_NAME = "mosaicml/mpt-500m"
 HF_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
 
 os.environ["HF_HOME"] = "/tmp/hg_cache"
@@ -24,7 +24,7 @@ model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.float16,
     token=HF_TOKEN,
     trust_remote_code=True
-    ).to(device)
+    ).to("cuda")
 
 # LoRA settings (set to work on CPU as well)
 lora_config = LoraConfig(
