@@ -22,7 +22,9 @@ model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
     torch_dtype=torch.float16,
     device_map="auto",
-    token=HF_TOKEN)
+    token=HF_TOKEN,
+    trust_remote_code=True
+    )
 
 # LoRA settings (set to work on CPU as well)
 lora_config = LoraConfig(
