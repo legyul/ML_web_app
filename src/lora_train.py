@@ -23,8 +23,9 @@ model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
     torch_dtype=torch.float16,
     token=HF_TOKEN,
-    trust_remote_code=True
-    ).to("cuda")
+    trust_remote_code=True,
+    low_cpu_mem_usage=True
+    ).to(device)
 
 # LoRA settings (set to work on CPU as well)
 lora_config = LoraConfig(
