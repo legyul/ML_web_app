@@ -27,6 +27,7 @@ langchain
 # LoRA
 trl
 auto-gptq
+einops
 
 # GPT-3.5-Turbo API
 openai
