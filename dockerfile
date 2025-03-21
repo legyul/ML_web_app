@@ -21,15 +21,13 @@ RUN yum update -y && yum install -y --allowerasing \
     libstdc++ \
     libstdc++-devel \
     binutils \
+    procps \
     && yum clean all
 
-RUN yum reinstall -y libstdc++ libstdc++-devel && \
-    ldconfig
+# Ensure C++ lib is reinstalled and updated
+RUN yum reinstall -y libstdc++ libstdc++-devel && ldconfig
 
-RUN ls -l /usr/lib64/ | grep libstdc++
-
-# ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-# ENV PATH="${JAVA_HOME}/bin:${PATH}"
+# Set Java Env
 ENV JAVA_HOME=/usr/lib/jvm/java-11-amazon-corretto.x86_64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
@@ -59,7 +57,12 @@ RUN mkdir -p /usr/local/hadoop/lib/native && \
 # Set Hadoop environment variables
 ENV HADOOP_OPTS="-Djava.library.path=/usr/local/hadoop/lib/native"
 ENV LD_LIBRARY_PATH="/usr/local/hadoop/lib/native:$LD_LIBRARY_PATH"
+
+# Hugging Face cache
 ENV HF_HOME=/tmp/hf_cache
+ENV HF_HUB_CACHE="/tmp/hf_cache"
+ENV TRANSFORMERS_CACHE="/tmp/hf_cache"
+ENV HF_DATASETS_CACHE="/tmp/hf_cache"
 ENV TMPDIR=/var/tmp
 
 # Upgrade pip
@@ -71,8 +74,7 @@ RUN yum install -y wget tar bzip2 gzip xz make gmp-devel mpfr-devel libmpc-devel
 # Install essential Python libraries
 ENV TMPDIR=/var/tmp
 RUN python3.11 -m pip install --no-cache-dir numpy pandas scikit-learn matplotlib seaborn && \
-    python3.11 -m pip install --no-cache-dir pyspark nltk peft transformers datasets accelerate && \
-    python3.11 -m pip install --no-cache-dir bitsandbytes && \
+    python3.11 -m pip install --no-cache-dir pyspark nltk peft transformers datasets accelerate einops && \
     rm -rf /root/.cache/pip
 
 RUN yum install -y procps && yum clean all
@@ -87,14 +89,11 @@ COPY requirements.txt /app/
 RUN python3.11 -m pip install --no-cache-dir -r requirements.txt && \
     rm -rf /root/.cache/pip
 
-ENV HF_HUB_CACHE="/tmp/hf_cache"
-ENV TRANSFORMERS_CACHE="/tmp/hf_cache"
-ENV HF_DATASETS_CACHE="/tmp/hf_cache"
-
 # Clean up unnecessary files whenever a container runs
-RUN echo '#!/bin/sh' > /usr/local/bin/clean_tmp
-RUN echo 'rm -rf /tmp/* /var/tmp/* /root/.cache/pip ~/.cache/pip' >> /usr/local/bin/clean_tmp
-RUN chmod +x /usr/local/bin/clean_tmp
+RUN echo '#!/bin/sh' > /usr/local/bin/clean_tmp && \
+    echo 'find /tmp -mindepth 1 -maxdepth 1 ! -name "hf_cache" -exec rm -rf {} +' >> /usr/local/bin/clean_tmp && \
+    echo 'rm -rf /var/tmp/* /root/.cache/pip ~/.cache/pip' >> /usr/local/bin/clean_tmp && \
+    chmod +x /usr/local/bin/clean_tmp
 
 # 7. Run Flask server
-CMD ["sh", "-c", "/usr/local/bin/clean_tmp && exec gunicorn -w 1 -b 0.0.0.0:5000 --timeout 300 --worker-class gthread --threads 1 src.app:app"]
+CMD ["sh", "-c", "/usr/local/bin/clean_tmp && exec gunicorn -w 1 -b 0.0.0.0:5000 --timeout 1200 --worker-class gthread --threads 1 src.app:app"]

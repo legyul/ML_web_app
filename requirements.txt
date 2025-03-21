@@ -24,9 +24,8 @@ chromadb
 sentence-transformers
 langchain
 
-# LoRA
+# LoRA & LLM
 trl
-auto-gptq
 einops
 
 # GPT-3.5-Turbo API
