@@ -84,7 +84,7 @@ COPY ./src /app/src
 COPY ./templates /app/templates
 COPY ./static /app/static
 COPY requirements.txt /app/
-COPY ./lora_train.py /app/lora_train.py
+COPY ./src/lora_train.py /app/lora_train.py
 
 # Install remaining dependencies from requirements.txt
 RUN python3.11 -m pip install --no-cache-dir -r requirements.txt && \
