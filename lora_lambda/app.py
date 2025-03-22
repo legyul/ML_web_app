@@ -1,12 +1,9 @@
-from dotenv import load_dotenv
 import json
 import os
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, TaskType
 from datasets import load_dataset
-
-load_dotenv()
 
 MODEL_DIR = "tmp/tinyllama_model"
 
@@ -51,8 +48,8 @@ def lambda_handler(event, context):
     # Upload to S3
     import boto3
 
-    S3_REGION = os.getenv("AWS_REGION")
-    S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+    S3_REGION = "us-east-2"
+    S3_BUCKET_NAME = "ml-platform-service"
 
     s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
 
