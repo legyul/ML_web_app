@@ -84,6 +84,7 @@ COPY ./src /app/src
 COPY ./templates /app/templates
 COPY ./static /app/static
 COPY requirements.txt /app/
+COPY ./lora_train.py /app/lora_train.py
 
 # Install remaining dependencies from requirements.txt
 RUN python3.11 -m pip install --no-cache-dir -r requirements.txt && \
@@ -96,4 +97,5 @@ RUN echo '#!/bin/sh' > /usr/local/bin/clean_tmp && \
     chmod +x /usr/local/bin/clean_tmp
 
 # 7. Run Flask server
-CMD ["sh", "-c", "/usr/local/bin/clean_tmp && exec gunicorn -w 1 -b 0.0.0.0:5000 --timeout 1200 --worker-class gthread --threads 1 src.app:app"]
+#CMD ["sh", "-c", "/usr/local/bin/clean_tmp && exec gunicorn -w 1 -b 0.0.0.0:5000 --timeout 1200 --worker-class gthread --threads 1 src.app:app"]
+CMD ["python3.11", "/app/lora_train.py"]
