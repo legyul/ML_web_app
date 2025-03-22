@@ -3,4 +3,3 @@ torch==2.1.2
 boto3
 peft==0.10.0
 numpy<2
-datasets
