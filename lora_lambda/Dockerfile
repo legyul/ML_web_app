@@ -10,6 +10,7 @@ ENV HF_HUB_CACHE=/tmp/hf_cache
 # Install requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip uninstall -y transformers && pip install transformers==4.38.2
 
 # Copy app.py
 COPY app.py .
