@@ -12,7 +12,7 @@ RUN python3.11 -m pip install --upgrade pip
 # Install requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip uninstall -y transformers && pip install transformers==4.38.2
+# RUN pip uninstall -y transformers && pip install transformers==4.38.2
 
 # Copy app.py
 COPY app.py .
