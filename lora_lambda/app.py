@@ -5,7 +5,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, TaskType
 from datasets import load_dataset
 
-MODEL_DIR = "tmp/tinyllama_model"
+MODEL_DIR = "/tmp/tinyllama_model"
 
 def lambda_handler(event, context):
     prompt = event.get("prompt", "Sample text")
