@@ -3,7 +3,7 @@ import os
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, TaskType
-from datasets import load_dataset
+
 
 MODEL_DIR = "/tmp/tinyllama_model"
 
@@ -58,5 +58,9 @@ def lambda_handler(event, context):
 
     return {
         "statusCode": 200,
-        "body": json.dumps({"message": "LoRA fine-tuning complete and uploaded to S3"})
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headrs": "*",
+        },
+        "body": json.dumps({"message": "LoRA fine-tuning complete and uploaded to S3."})
     }
