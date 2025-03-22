@@ -7,6 +7,8 @@ ENV TRANSFORMERS_CACHE=/tmp/hf_cache
 ENV HF_HOME=/tmp/hf_cache
 ENV HF_HUB_CACHE=/tmp/hf_cache
 
+RUN python3.11 -m pip install --upgrade pip
+
 # Install requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
