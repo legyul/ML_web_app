@@ -10,6 +10,16 @@ S3_BUCKET_NAME = "ml-platform-service"
 S3_MODEL_PREFIX = "models/tinyllama_model"
 LOCAL_MODEL_DIR = "/tmp/tinyllama_model"
 
+REQUIRED_FILES = {
+    "config.json",
+    "tokenizer_config.json",
+    "tokenizer.json",
+    "tokenizer.model",
+    "special_tokens_map.json",
+    "generation_config.json",
+    "model.safetensors"
+}
+
 # Ensure model is downloaded to /tmp
 def download_model_from_s3():
     s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
@@ -22,11 +32,14 @@ def download_model_from_s3():
     for obj in response["Contents"]:
         key = obj["Key"]
         filename = os.path.basename(key)
+            
         if filename == "":
             continue
+        
+        if filename in REQUIRED_FILES:
+            dest_path = os.path.join(LOCAL_MODEL_DIR, filename)
+            s3.download_file(S3_BUCKET_NAME, key, dest_path)
 
-        dest_path = os.path.join(LOCAL_MODEL_DIR, filename)
-        s3.download_file(S3_BUCKET_NAME, key, dest_path)
 
 def lambda_handler(event, context):
     download_model_from_s3()
