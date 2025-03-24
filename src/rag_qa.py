@@ -1,5 +1,5 @@
 import os
-from langchain.vectorstores import Chroma
+from langchain_community.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.llms import huggingface_pipeline
 from langchain.chains import retrieval_qa

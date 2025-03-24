@@ -23,6 +23,7 @@ fpdf==1.7.2
 chromadb
 sentence-transformers
 langchain
+langchain-community
 
 # LoRA & LLM
 trl
