@@ -14,8 +14,9 @@ import pandas as pd
 from fpdf import FPDF
 import pickle
 import torch
-from rag import ask_model_rag, load_model_from_s3
+from rag_qa import load_qa_pipeline
 from lora_train import model, tokenizer
+from model_utils import load_model_from_s3
 
 # Load environment variables from .env file
 load_dotenv()
@@ -74,6 +75,9 @@ current_filename = None
 
 device = "cpu"
 model.to(device)
+
+# Reset RAG QA Pipeline
+qa_pipeline = load_qa_pipeline()
 
 @app.route('/')
 def home():
@@ -420,38 +424,41 @@ def ask_question():
     question = data.get("question", "")
     input_data = data.get("input_data", None)       # New data entered by the user
 
-    # Search for documents related to questions using the RAG
-    relevant_data = ask_model_rag(question)
-    context = f"Relevant Data: {relevant_data}" if relevant_data else "No relevant data found."
+    # Generating RAG-based responses
+    try:
+        rag_response = qa_pipeline.run(question)
+    except Exception as e:
+        rag_response = f"Error during RAG processing: {str(e)}"
+    
+    context = f"RAG response: {rag_response}"
 
-    # Load Classification model and perform prediction
+    # Performing classification model prediction
     prediction = None
     model_s3_key = f"result/{filename}_model_and_info.zip" if task == "classification" else None
+    model_name = f"{filename}_model.pkl"
 
     if task == "classification" and input_data:
         print(f"Using trained classification model for prediction: {model_s3_key}")
-        model = load_model_from_s3(model_s3_key)
-
+        model = load_model_from_s3(model_s3_key, model_filename=model_name)
         if model:
             prediction = model.predict([input_data])[0]
-            context += f"\n**Predicted Value:** {prediction}"
-
-    # Use MPT-7B (LoRA) (Classification / Clustering)
+            context += f"\n\nPrediction result: {prediction}"
+    
+    # Generating the final generative response (utilizing the LoRA model)
     if task in ["classification", "clustering"]:
-        print("Using MPT-7B (LoRA)")
+        print("Using TinyLlama + LoRA")
         full_input = f"{context}\n\nQuestion: {question}"
         inputs = tokenizer(full_input, return_tensors="pt").to("cpu")
 
         with torch.no_grad():
-            output = model.generate(**inputs, max_length=150)
+            output = model.generate(**inputs, max_length=200)
+        
         response_text = tokenizer.decode(output[0], skip_special_tokens=True)
 
         return jsonify({"response": response_text, "prediction": prediction})
-    
-    # Common Questions Use GPT-3.5-Turbo
+
     else:
-        print("Using GPT-3.5-Turbo")
-        return jsonify({"response": relevant_data})
+        return jsonify({"response": rag_response})
 
 if __name__ == '__main__':
     app.run(debug=True)

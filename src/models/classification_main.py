@@ -10,7 +10,7 @@ import io
 import zipfile
 
 def run_classification(file_key, model_choice):
-    file_name = Path(file_key).stem
+    filename = Path(file_key).stem
 
     model_info_buffer = io.BytesIO()
     model_buffer = io.BytesIO()
@@ -19,7 +19,7 @@ def run_classification(file_key, model_choice):
     styles.add(ParagraphStyle(name='Bold', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=12))
 
     title = Paragraph(f"Classification {model_choice} Report", styles['Title'])
-    file_name_para = Paragraph(f"File Name: {file_name}", styles['Normal'])
+    file_name_para = Paragraph(f"File Name: {filename}", styles['Normal'])
 
     df, _ = load_file(file_key)
 
@@ -108,8 +108,8 @@ def run_classification(file_key, model_choice):
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
             # Add model info and model file to the zip buffer
-            zipf.writestr(f"{file_name}_model_info.json", model_info_buffer.getvalue())  # Model info file
-            zipf.writestr(f"{file_name}_model.pkl", model_buffer.getvalue())  # Model file
+            zipf.writestr(f"{filename}_model_info.json", model_info_buffer.getvalue())  # Model info file
+            zipf.writestr(f"{filename}_model.pkl", model_buffer.getvalue())  # Model file
 
         
         zip_buffer.seek(0)
@@ -117,5 +117,5 @@ def run_classification(file_key, model_choice):
         return pdf_buffer, zip_buffer
     
     except Exception as e:
-        print(f"Error during {file_name}: {e}")
+        print(f"Error during {filename}: {e}")
         return None, None

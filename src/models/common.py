@@ -1,8 +1,6 @@
 import pandas as pd
-import numpy as np
 from sklearn.preprocessing import StandardScaler as sklearnStandardScaler, LabelEncoder
 from sklearn.impute import SimpleImputer
-import re
 from dotenv import load_dotenv
 import os
 from logger_utils import logger
@@ -15,22 +13,23 @@ from pyspark.sql.types import DoubleType, FloatType, IntegerType, LongType, Stri
 from pyspark.sql import functions as F
 
 
+
 load_dotenv()
-# os.environ["JAVA_HOME"] = '/usr/lib/jvm/java-11-openjdk-amd64'
-# os.environ["SPARK_HOME"] = '/usr/local/spark'
 
 spark = SparkSession.builder \
-    .appName("DataPreprocessing") \
-    .config("spark.master", "local[1]") \
-    .config("spark.driver.memory", "1g") \
-    .config("spark.executor.memory", "1g") \
-    .config("spark.driver.maxResultSize", "500m") \
-    .config("spark.sql.shuffle.partitions", "10") \
+    .setAppName("DataPreprocessing") \
+    .setMaster("local[1]") \
+    .set("spark.driver.memory", "1g")  \
+    .set("spark.executor.memory", "1g") \
+    .set("spark.driver.maxResultSize", "512m") \
+    .set("spark.executor.heartbeatInterval", "20s") \
+    .set("spark.network.timeout", "60s") \
     .getOrCreate()
 
+S3_REGION = "us-east-2"
 S3_BUCKET_NAME = "ml-platform-service"
 
-s3 = boto3.client('s3')
+s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
 
 # Load dataset file
 def load_file(file_key):
@@ -83,6 +82,7 @@ def load_file(file_key):
             return pd.read_json(s3_path), mode
         else:
             raise ValueError("Unsupported file format. Supported formats are .csv, .xlsx, and .json")
+
 
 class spark_processing:
     def spark_preprocessing_data(data, mode):
