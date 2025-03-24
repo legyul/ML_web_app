@@ -17,13 +17,13 @@ from pyspark.sql import functions as F
 load_dotenv()
 
 spark = SparkSession.builder \
-    .setAppName("DataPreprocessing") \
-    .setMaster("local[1]") \
-    .set("spark.driver.memory", "1g")  \
-    .set("spark.executor.memory", "1g") \
-    .set("spark.driver.maxResultSize", "512m") \
-    .set("spark.executor.heartbeatInterval", "20s") \
-    .set("spark.network.timeout", "60s") \
+    .appName("DataPreprocessing") \
+    .master("local[1]") \
+    .config("spark.driver.memory", "1g")  \
+    .config("spark.executor.memory", "1g") \
+    .config("spark.driver.maxResultSize", "512m") \
+    .config("spark.executor.heartbeatInterval", "20s") \
+    .config("spark.network.timeout", "60s") \
     .getOrCreate()
 
 S3_REGION = "us-east-2"
