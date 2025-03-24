@@ -2,8 +2,8 @@ import os
 import pandas as pd
 from dotenv import load_dotenv
 from langchain_community.vectorstores import Chroma
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.docstore.document import Document
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.docstore.document import Document
 from models.common import load_file
 
 load_dotenv()

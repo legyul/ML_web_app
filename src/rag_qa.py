@@ -1,8 +1,8 @@
 import os
 from langchain_community.vectorstores import Chroma
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.llms import huggingface_pipeline
-from langchain.chains import retrieval_qa
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.llms import huggingface_pipeline
+from langchain_community.chains import retrieval_qa
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 
 # Set the vector DB path
