@@ -3,7 +3,7 @@ from sklearn.preprocessing import StandardScaler as sklearnStandardScaler, Label
 from sklearn.impute import SimpleImputer
 from dotenv import load_dotenv
 import os
-from logger_utils import logger
+from utils.logger_utils import logger
 import boto3
 from botocore.exceptions import ClientError
 from pyspark.sql import SparkSession
@@ -11,8 +11,6 @@ from pyspark.sql.functions import col, lower, udf
 from pyspark.ml.feature import Imputer, StringIndexer, StandardScaler as sparkStandardScaler, VectorAssembler
 from pyspark.sql.types import DoubleType, FloatType, IntegerType, LongType, StringType
 from pyspark.sql import functions as F
-
-
 
 load_dotenv()
 

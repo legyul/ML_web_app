@@ -1,7 +1,7 @@
 import os
 import sys
 from models import run_cluster, run_classification
-from logger_utils import logger, upload_log_to_s3
+from utils.logger_utils import logger, upload_log_to_s3
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify, session, Response
 from werkzeug.utils import secure_filename
 import boto3
@@ -16,7 +16,7 @@ import pickle
 import torch
 from rag_qa import load_qa_pipeline
 from lora_train import model, tokenizer
-from model_utils import load_model_from_s3
+from utils.model_utils import load_model_from_s3
 
 # Load environment variables from .env file
 load_dotenv()

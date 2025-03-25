@@ -6,6 +6,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 import torch
 import shutil
+from utils.download_utils import download_llm_model_from_s3
 
 load_dotenv()
 
@@ -13,8 +14,10 @@ load_dotenv()
 S3_REGION = os.getenv("AWS_REGION")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 S3_MODEL_PATH = "models/tinyllama_model/"
-DOWNLOAD_DIR = "./tmp/tinyllama_model"
+LOCAL_MODEL_DIR = "./tmp/tinyllama_model"
 HF_CACHE = "/tmp/hf_cache"
+
+s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
 
 REQUIRED_FILES = {
     "config.json",
@@ -26,36 +29,16 @@ REQUIRED_FILES = {
     "model.safetensors"
 }
 
-# Clean previous directory
-if os.path.exists(DOWNLOAD_DIR):
-    shutil.rmtree(DOWNLOAD_DIR)
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-
-# Set S3 client
-s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
-
-# Download required model files from S3
-try:
-    response = s3.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=S3_MODEL_PATH)
-
-    if "Contents" in response:
-        for obj in response["Contents"]:
-            filename = os.path.basename(obj["Key"])
-            if filename in REQUIRED_FILES:
-                dest_path = os.path.join(DOWNLOAD_DIR, filename)
-                print(f"Downloading: {filename}")
-                s3.download_file(S3_BUCKET_NAME, obj["Key"], dest_path)
-
-    else:
-        print(f"🚨 Model files are not in S3 '{S3_MODEL_PATH}'!")
-
-except NoCredentialsError:
-    print("❌ No AWS authentication information! Authentication setting required with 'aws configure'")
+download_llm_model_from_s3(S3_REGION=S3_REGION,
+                           S3_BUCKET_NAME=S3_BUCKET_NAME,
+                           s3_model_path=S3_MODEL_PATH,
+                           local_dir=LOCAL_MODEL_DIR,
+                           required_files=REQUIRED_FILES)
 
 # Load Hugging Face model
 try:
-    tokenizer = AutoTokenizer.from_pretrained(DOWNLOAD_DIR, cache_dir=HF_CACHE)
-    base_model = AutoModelForCausalLM.from_pretrained(DOWNLOAD_DIR, cache_dir=HF_CACHE, torch_dtype=torch.float32)
+    tokenizer = AutoTokenizer.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE)
+    base_model = AutoModelForCausalLM.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, torch_dtype=torch.float32)
     print("✅ Complete the loading Model & tokenizer!")
 
 except Exception as e:

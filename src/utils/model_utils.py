@@ -5,13 +5,7 @@ import pickle
 import importlib
 import subprocess
 import sys
-import zipfile
-import boto3
 
-S3_REGION = "us-east-2"
-S3_BUCKET_NAME = "ml-platform-service"
-
-s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
 
 def install_and_import(package):
     '''
@@ -88,30 +82,3 @@ def save_model_with_info(model, model_name, required_packages=None):
     return model_info_buffer, model_buffer
 
 
-def load_model_from_s3(s3_key, model_filename="model.pkl"):
-    """
-    Download and load the model from S3
-
-    Parameter
-    - s3_key (string): The path of the model file on S3
-
-    Return
-    - Loaded model object
-    """
-    try:
-        print(f"Downloading model from S3: {s3_key}")
-        response = s3.get_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
-        zip_data = response['Body'].read()
-
-        with zipfile.ZipFile(io.BytesIO(zip_data)) as zf:
-            if model_filename not in zf.namelist():
-                raise FileNotFoundError(f"'{model_filename}' not found in zip archive")
-            
-            with zf.open(model_filename) as model_file:
-                model = pickle.load(model_file)
-                print("Complete to load model")
-                return model
-    
-    except Exception as e:
-        print(f"Fail to load model: {e}")
-        return None

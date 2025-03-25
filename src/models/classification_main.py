@@ -1,6 +1,6 @@
 from .common import load_file
 from .classification_models import preprocess, select_model, build_model_dict, BestModel, individual_model
-from model_utils import save_model_with_info
+from utils.model_utils import save_model_with_info
 from pathlib import Path
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape

@@ -15,7 +15,7 @@ from scipy.stats import uniform
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 import time
-from logger_utils import logger
+from utils.logger_utils import logger
 
 
 class preprocess:
