@@ -61,7 +61,6 @@ ENV LD_LIBRARY_PATH="/usr/local/hadoop/lib/native:$LD_LIBRARY_PATH"
 # Hugging Face cache
 ENV HF_HOME=/tmp/hf_cache
 ENV HF_HUB_CACHE="/tmp/hf_cache"
-ENV TRANSFORMERS_CACHE="/tmp/hf_cache"
 ENV HF_DATASETS_CACHE="/tmp/hf_cache"
 ENV TMPDIR=/var/tmp
 

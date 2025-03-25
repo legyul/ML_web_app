@@ -16,7 +16,7 @@ import pickle
 import torch
 from rag_qa import load_qa_pipeline
 from lora_train import model, tokenizer
-from utils.model_utils import load_model_from_s3
+from utils.download_utils import load_model_from_s3
 
 # Load environment variables from .env file
 load_dotenv()
