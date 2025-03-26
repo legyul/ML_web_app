@@ -75,7 +75,7 @@ RUN yum install -y wget tar bzip2 gzip xz make gmp-devel mpfr-devel libmpc-devel
 # Install essential Python libraries
 ENV TMPDIR=/var/tmp
 RUN python -m pip install --no-cache-dir numpy pandas scikit-learn matplotlib seaborn && \
-    python -m pip install --no-cache-dir pyspark nltk peft transformers datasets accelerate einops langchain langchain-community && \
+    python -m pip install --no-cache-dir pyspark nltk peft transformers datasets accelerate einops langchain langchain-huggingface langchain-community && \
     python -m pip install --no-cache-dir gunicorn && \
     rm -rf /root/.cache/pip
 

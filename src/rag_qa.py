@@ -8,7 +8,7 @@ from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 from utils.download_utils import download_llm_model_from_s3
 
 # Set the vector DB path
-CHROMA_PATH = os.getenv("CHROMA_PATH", "./chroma_db")
+CHROMA_PATH = os.path.abspath(os.getenv("CHROMA_PATH", "./chroma_db"))
 # Embedding model path
 EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 # LLM model path
@@ -33,7 +33,7 @@ def load_qa_pipeline():
     """
     Initialize a system that finds similar documents when asked and causes LLM to generate answers
     """
-
+    print(f"[DEBUG] Loading vector DB from {CHROMA_PATH}")
     download_llm_model_from_s3(S3_REGION=S3_REGION,
                                S3_BUCKET_NAME=S3_BUCKET_NAME,
                                s3_model_path=S3_MODEL_PATH,
