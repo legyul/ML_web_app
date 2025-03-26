@@ -76,6 +76,7 @@ RUN yum install -y wget tar bzip2 gzip xz make gmp-devel mpfr-devel libmpc-devel
 ENV TMPDIR=/var/tmp
 RUN python -m pip install --no-cache-dir numpy pandas scikit-learn matplotlib seaborn && \
     python -m pip install --no-cache-dir pyspark nltk peft transformers datasets accelerate einops langchain langchain-community && \
+    python -m pip install --no-cache-dir gunicorn && \
     rm -rf /root/.cache/pip
 
 RUN yum install -y procps && yum clean all
@@ -98,5 +99,5 @@ RUN echo '#!/bin/sh' > /usr/local/bin/clean_tmp && \
     chmod +x /usr/local/bin/clean_tmp
 
 # 7. Run Flask server
-CMD ["sh", "-c", "/usr/local/bin/clean_tmp && exec gunicorn -w 1 -b 0.0.0.0:5000 --timeout 1200 --worker-class gthread --threads 1 src.app:app"]
+CMD ["sh", "-c", "/usr/local/bin/clean_tmp && exec python3.11 -m gunicorn -w 1 -b 0.0.0.0:5000 --timeout 1200 --worker-class gthread --threads 1 src.app:app"]
 #CMD ["python3.11", "/app/lora_train.py"]
