@@ -76,6 +76,8 @@ current_filename = None
 device = "cpu"
 model.to(device)
 
+# Reset RAG QA Pipeline
+qa_pipeline = load_qa_pipeline()
 
 @app.route('/')
 def home():
@@ -416,9 +418,6 @@ def chat_interface():
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
-    # Reset RAG QA Pipeline
-    qa_pipeline = load_qa_pipeline()
-    
     data = request.json
     task = data.get("task", "unknown")      # Clustering or Classification
     filename = data.get("filename", "unknown")
