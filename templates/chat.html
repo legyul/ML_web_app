@@ -3,96 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat with AI</title>
+    <title>Ask to AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Chat with AI</h1>
+    <div class="chat-container">
+        <h1>Ask to AI</h1>
+        <p id="task-info"></p>
 
-    <p id="task-info"></p>
+        <div class="chat-box" id="chat-box"></div>
+        <div id="spinner">✨ Generating response...</div>
 
-    <label for="question">Ask a question:</label>
-    <input type="text" id="question" placeholder="Enter your question" onkeypress="handleKeyPress(event)">
-    <button id="submit-btn" onclick="askQuestion()">Submit</button>
-
-    <br><br>
-
-    <h2>Response:</h2>
-    <div id="response-container">
-        <p id="response" style="white-space: pre-line;"></p>  <!-- ✅ New Line Processing -->
+        <div class="input-row">
+            <input type="text" id="question" placeholder="Enter your question" onkeypress="handleKeyPress(event)" />
+            <button id="submit-btn" onclick="askQuestion()">Send</button>
+        </div>
     </div>
 
     <div class="footer-container">
         {% include 'footer.html' %}
     </div>
-    
+
     <script>
-        // ✅ Get 'task' and 'filename' from URL
         const urlParams = new URLSearchParams(window.location.search);
-        const task = urlParams.get("task") || "unknown";  // Set default
+        const task = urlParams.get("task") || "unknown";
         const filename = urlParams.get("filename") || "unknown";
 
-        // ✅ Display task information on the page
         document.getElementById("task-info").innerText = `Current Task: ${task}`;
 
-        // ✅ Show a warning if filename is "unknown"
-        if (filename === "unknown") {
-            alert("⚠️ Warning: No file selected. Some features may not work properly.");
-        }
+        const chatBox = document.getElementById("chat-box");
+        const spinner = document.getElementById("spinner");
 
-        // ✅ Submit a question when pressing the "Enter" key
         function handleKeyPress(event) {
-            if (event.key === "Enter") {
-                askQuestion();
-            }
+            if (event.key === "Enter") askQuestion();
         }
 
         async function askQuestion() {
-            let questionInput = document.getElementById("question");
-            let question = questionInput.value.trim();
-            let responseContainer = document.getElementById("response");
-            let submitBtn = document.getElementById("submit-btn");
+            const questionInput = document.getElementById("question");
+            const question = questionInput.value.trim();
+            const submitBtn = document.getElementById("submit-btn");
 
-            // ✅ Prevent empty questions
-            if (!question) {
-                alert("Please enter a question.");
-                return;
-            }
+            if (!question) return alert("Please enter a question.");
 
-            // ✅ Show loading status and disable button
-            responseContainer.innerText = "Loading...";
+            addMessageToChat("user", question);
+            questionInput.value = "";
             submitBtn.disabled = true;
             questionInput.disabled = true;
+            spinner.style.display = "block";
 
             try {
-                let response = await fetch("/ask", {
+                const res = await fetch("/ask", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ task: task, filename: filename, question: question })
+                    body: JSON.stringify({ task, filename, question })
                 });
 
-                let result = await response.json();
+                const result = await res.json();
+                const responseText = result.response || result.error || "❌ Unexpected error";
+                showTypingEffect("bot", responseText);
 
-                // ✅ Handle responses and errors
-                if (result.response) {
-                    responseContainer.innerText = result.response;
-                } else if (result.error) {
-                    responseContainer.innerText = `❌ Error: ${result.error}`;
-                } else {
-                    responseContainer.innerText = "❌ Unexpected error occurred.";
-                }
-            } catch (error) {
-                responseContainer.innerText = `❌ Network Error: ${error.message}`;
+            } catch (err) {
+                addMessageToChat("bot", `❌ Network Error: ${err.message}`);
             } finally {
-                // ✅ Re-enable input field and button
+                spinner.style.display = "none";
                 submitBtn.disabled = false;
                 questionInput.disabled = false;
-                questionInput.value = "";  // ✅ Clear input field after submission
-                questionInput.focus();  // ✅ Auto-focus on input field
+                questionInput.focus();
             }
+        }
 
-            // ✅ Scroll to the latest response
-            document.getElementById("response-container").scrollIntoView({ behavior: "smooth" });
+        function addMessageToChat(sender, message) {
+            const msgDiv = document.createElement("div");
+            msgDiv.className = `message ${sender === "user" ? "user-message" : "bot-message"}`;
+            msgDiv.innerText = message;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function showTypingEffect(sender, message) {
+            const msgDiv = document.createElement("div");
+            msgDiv.className = `message ${sender === "user" ? "user-message" : "bot-message"}`;
+            chatBox.appendChild(msgDiv);
+
+            let index = 0;
+            function typeChar() {
+                if (index < message.length) {
+                    msgDiv.innerText += message.charAt(index);
+                    index++;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                    setTimeout(typeChar, 20);
+                }
+            }
+            typeChar();
         }
     </script>
 </body>

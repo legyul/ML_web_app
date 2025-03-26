@@ -161,3 +161,80 @@ pre {
     align-items: center;
     padding-bottom: 120px;
 }
+
+.chat-container {
+    max-width: 800px;
+    margin: auto;
+    padding: 20px;
+}
+
+.chat-box {
+    background: #f7f7f7;
+    border-radius: 10px;
+    padding: 20px;
+    height: 400px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.message {
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    max-width: 75%;
+    border-radius: 20px;
+    display: inline-block;
+    animation: fadeIn 0.3s ease-in-out;
+    word-wrap: break-word;
+}
+
+.user-message {
+    background-color: #d1e7dd;
+    align-self: flex-end;
+    text-align: right;
+    margin-left: auto;
+}
+
+.bot-message {
+    background-color: #fff3cd;
+    align-self: flex-start;
+    text-align: left;
+    margin-right: auto;
+}
+
+.input-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.input-row input {
+    flex: 1;
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.input-row button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#spinner {
+    display: none;
+    font-style: italic;
+    color: gray;
+    padding: 10px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.llms import huggingface_pipeline
 from langchain.chains import retrieval_qa
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
@@ -63,6 +63,7 @@ def load_qa_pipeline():
     llm = huggingface_pipeline(pipeline=llm_pipeline)
     qa = retrieval_qa.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
 
+    print("Pipeline loaded")
     return qa
 
 def run_qa(query: str) -> str:
