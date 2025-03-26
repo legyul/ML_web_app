@@ -69,7 +69,7 @@ project/
 │       └── clustering_model.py      # All clustering model implementations
 ├── templates/
 │   └── index.html               # Frontend UI (Form, Chat interface)
-├── static/                      # CSS, JavaScript, and image files
+├── static/                      # CSS and JavaScript files
 ├── models/                      # Trained models (saved to S3)
 ├── logs/                        # Log files (viewable/downloadable)
 ├── requirements.txt             # Python dependencies
