@@ -16,12 +16,12 @@ load_dotenv()
 
 spark = SparkSession.builder \
     .appName("DataPreprocessing") \
-    .master("local[1]") \
-    .config("spark.driver.memory", "1g")  \
-    .config("spark.executor.memory", "1g") \
-    .config("spark.driver.maxResultSize", "512m") \
-    .config("spark.executor.heartbeatInterval", "20s") \
-    .config("spark.network.timeout", "60s") \
+    .master("local[*]") \
+    .config("spark.driver.memory", "2g")  \
+    .config("spark.executor.memory", "2g") \
+    .config("spark.driver.maxResultSize", "1g") \
+    .config("spark.executor.heartbeatInterval", "30s") \
+    .config("spark.network.timeout", "120s") \
     .getOrCreate()
 
 S3_REGION = "us-east-2"

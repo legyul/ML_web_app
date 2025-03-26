@@ -38,12 +38,12 @@ if not app.secret_key:
 # Troubleshooting Network Timeout
 conf = SparkConf() \
     .setAppName("DataPreprocessing") \
-    .setMaster("local[1]") \
-    .set("spark.driver.memory", "1g")  \
-    .set("spark.executor.memory", "1g") \
-    .set("spark.driver.maxResultSize", "512m") \
-    .set("spark.executor.heartbeatInterval", "20s") \
-    .set("spark.network.timeout", "60s") \
+    .setMaster("local[*]") \
+    .set("spark.driver.memory", "2g")  \
+    .set("spark.executor.memory", "2g") \
+    .set("spark.driver.maxResultSize", "1g") \
+    .set("spark.executor.heartbeatInterval", "30s") \
+    .set("spark.network.timeout", "120s") \
 
 if SparkContext._active_spark_context:
     SparkContext._active_spark_context.stop()
