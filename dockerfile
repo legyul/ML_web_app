@@ -24,6 +24,8 @@ RUN yum update -y && yum install -y --allowerasing \
     procps \
     && yum clean all
 
+RUN alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+
 # Ensure C++ lib is reinstalled and updated
 RUN yum reinstall -y libstdc++ libstdc++-devel && ldconfig
 
@@ -65,15 +67,15 @@ ENV HF_DATASETS_CACHE="/tmp/hf_cache"
 ENV TMPDIR=/var/tmp
 
 # Upgrade pip
-RUN python3.11 -m pip install --upgrade pip
+RUN python -m pip install --upgrade pip
 
 # Install GCC 13.2.0
 RUN yum install -y wget tar bzip2 gzip xz make gmp-devel mpfr-devel libmpc-devel
 
 # Install essential Python libraries
 ENV TMPDIR=/var/tmp
-RUN python3.11 -m pip install --no-cache-dir numpy pandas scikit-learn matplotlib seaborn && \
-    python3.11 -m pip install --no-cache-dir pyspark nltk peft transformers datasets accelerate einops langchain langchain-community && \
+RUN python -m pip install --no-cache-dir numpy pandas scikit-learn matplotlib seaborn && \
+    python -m pip install --no-cache-dir pyspark nltk peft transformers datasets accelerate einops langchain langchain-community && \
     rm -rf /root/.cache/pip
 
 RUN yum install -y procps && yum clean all
@@ -86,7 +88,7 @@ COPY requirements.txt /app/
 COPY ./src/lora_train.py /app/lora_train.py
 
 # Install remaining dependencies from requirements.txt
-RUN python3.11 -m pip install --no-cache-dir -r requirements.txt && \
+RUN python -m pip install --no-cache-dir -r requirements.txt && \
     rm -rf /root/.cache/pip
 
 # Clean up unnecessary files whenever a container runs
