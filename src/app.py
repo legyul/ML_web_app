@@ -15,7 +15,6 @@ from fpdf import FPDF
 import pickle
 import torch
 from rag_qa import get_qa_pipeline
-from lora_train import model, tokenizer
 from utils.download_utils import load_model_from_s3, download_llm_model_from_s3
 from lora_train import train_lora_from_user_data
 
@@ -75,7 +74,6 @@ app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 current_filename = None
 
 device = "cpu"
-model.to(device)
 
 @app.route('/')
 def home():
@@ -223,6 +221,7 @@ def start_classification(filename):
     try:
         try:
             pdf_file, model_buffer = run_classification(s3_file_path, model_choice=model_choice)
+            train_lora_from_user_data(filename)
         except Exception as e:
             return jsonify({"error": "Error during classification processing."}), 500
 
@@ -463,7 +462,7 @@ def ask_question():
         LOCAL_LORA_PATH = "/tmp/lora_finetuned_model"
         LORA_MODEL_S3_KEY = "models/lora_finetuned"
         HF_CACHE = "/tmp/hf_cache"
-        
+
         REQUIRED_FILES = {
             "config.json",
             "tokenizer_config.json",
