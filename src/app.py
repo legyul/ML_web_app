@@ -16,7 +16,8 @@ import pickle
 import torch
 from rag_qa import get_qa_pipeline
 from lora_train import model, tokenizer
-from utils.download_utils import load_model_from_s3
+from utils.download_utils import load_model_from_s3, download_llm_model_from_s3
+from lora_train import train_lora_from_user_data
 
 # Load environment variables from .env file
 load_dotenv()
@@ -421,37 +422,79 @@ def chat_interface():
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
     data = request.json
     task = data.get("task", "unknown")      # Clustering or Classification
     filename = data.get("filename", "unknown")
     question = data.get("question", "")
     input_data = data.get("input_data", None)       # New data entered by the user
 
+    context = ""
+
     # Dynamically load QA pipeline when needed
     try:
         # Reset RAG QA Pipeline
         qa_pipeline = get_qa_pipeline()
         rag_response = qa_pipeline.run(question)
+        context = f"RAG response: {rag_response}"
     except Exception as e:
         rag_response = f"Error during RAG processing: {str(e)}"
-    
-    context = f"RAG response: {rag_response}"
+        context = rag_response
 
     # Performing classification model prediction
     prediction = None
+    model = None
     model_s3_key = f"result/{filename}_model_and_info.zip" if task == "classification" else None
     model_name = f"{filename}_model.pkl"
 
     if task == "classification" and input_data:
-        print(f"Using trained classification model for prediction: {model_s3_key}")
-        model = load_model_from_s3(model_s3_key, model_filename=model_name)
-        if model:
-            prediction = model.predict([input_data])[0]
-            context += f"\n\nPrediction result: {prediction}"
+        try:
+            model_clf = load_model_from_s3(model_s3_key, model_filename=model_name)
+            
+            if model_clf:
+                prediction = model_clf.predict([input_data])[0]
+                context += f"\n\nPrediction result: {prediction}"
+        except Exception as e:
+            print(f"Classification prediction error: {e}")
     
-    # Generating the final generative response (utilizing the LoRA model)
-    if task in ["classification", "clustering"]:
-        print("Using TinyLlama + LoRA")
+    # Auto-load LoRA model (first try fine-tuned model)
+    try:
+        LOCAL_LORA_PATH = "/tmp/lora_finetuned_model"
+        LORA_MODEL_S3_KEY = "models/lora_finetuned"
+        HF_CACHE = "/tmp/hf_cache"
+        
+        REQUIRED_FILES = {
+            "config.json",
+            "tokenizer_config.json",
+            "tokenizer.json",
+            "tokenizer.model",
+            "special_tokens_map.json",
+            "generation_config.json",
+            "model.safetensors"
+        }
+
+        if not os.path.exists(LOCAL_LORA_PATH):
+            print("Downloading fine-tuned LoRA model from S3...")
+            download_llm_model_from_s3(
+                S3_REGION,
+                S3_BUCKET_NAME,
+                LORA_MODEL_S3_KEY,
+                LOCAL_LORA_PATH,
+                REQUIRED_FILES
+            )
+
+        # Load tokenizer and model
+        tokenizer = AutoTokenizer.from_pretrained(LOCAL_LORA_PATH, cache_dir=HF_CACHE)
+        model = AutoModelForCausalLM.from_pretrained(LOCAL_LORA_PATH, cache_dir=HF_CACHE)
+        model.to("cpu")
+    
+    except Exception as e:
+        print(f"Failed to load fine-tuned model: {e}")
+        return jsonify({"response": f"❌ Failed to load LoRA model: {str(e)}"})
+    
+    # LoRA-based generative response
+    try:
         full_input = f"{context}\n\nQuestion: {question}"
         inputs = tokenizer(full_input, return_tensors="pt").to("cpu")
 
@@ -460,10 +503,14 @@ def ask_question():
         
         response_text = tokenizer.decode(output[0], skip_special_tokens=True)
 
-        return jsonify({"response": response_text, "prediction": prediction})
+        return jsonify({
+            "response": response_text,
+            "prediction": prediction
+        })
+    
+    except Exception as e:
+        return jsonify({"response": f"❌ Generation error: {str(e)}"})
 
-    else:
-        return jsonify({"response": rag_response})
 
 if __name__ == '__main__':
     app.run(debug=True)

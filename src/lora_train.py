@@ -1,12 +1,15 @@
 from dotenv import load_dotenv
 import os
+import pandas as pd
 import boto3
 from botocore.exceptions import NoCredentialsError
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 import torch
+from torch.utils.data import Dataset, DataLoader
 import shutil
 from utils.download_utils import download_llm_model_from_s3
+from models.common import load_file
 
 load_dotenv()
 
@@ -16,6 +19,7 @@ S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 S3_MODEL_PATH = "models/tinyllama_model/"
 LOCAL_MODEL_DIR = "./tmp/tinyllama_model"
 HF_CACHE = "/tmp/hf_cache"
+SAVE_PATH = "/tmp/lora_finetuned_model"
 
 s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
 
@@ -29,62 +33,87 @@ REQUIRED_FILES = {
     "model.safetensors"
 }
 
-download_llm_model_from_s3(S3_REGION=S3_REGION,
-                           S3_BUCKET_NAME=S3_BUCKET_NAME,
-                           s3_model_path=S3_MODEL_PATH,
-                           local_dir=LOCAL_MODEL_DIR,
-                           required_files=REQUIRED_FILES)
+device = torch.device("cpu")
 
-# Load Hugging Face model
-try:
+def get_prompts_from_s3_dataset(s3_key: str) -> list[str]:
+    """
+    Convert user uploaded data to training sentence
+    """
+    df, _ = load_file(s3_key)
+    prompts = []
+
+    IGNORE_COLUMNS = ["ID", "Timestamp"]
+
+    for _, row in df.iterrows():
+        text = "\n".join([f"{col}: {row[col]}" for col in df.columns if col not in IGNORE_COLUMNS])
+        prompts.append(text)
+    
+    return prompts
+
+class PromptDataset(Dataset):
+    """
+    Dataset for training LoRA
+    """
+    def __init__(self, prompts, tokenizer):
+        self.encodings = tokenizer(prompts, truncation=True, padding=True, return_tensors="pt")
+        self.labels = self.encodings["input_ids"].clone()
+        self.encodings["labels"] = self.labels
+    
+    def __getitem__(self, idx):
+        return {key: val[idx] for key, val in self.encodings.items()}
+    
+    def __len__(self):
+        return len(self.labels)
+    
+def train_lora_from_user_data(s3_dataset_key: str):
+    # Download model
+    download_llm_model_from_s3(S3_REGION=S3_REGION,
+                            S3_BUCKET_NAME=S3_BUCKET_NAME,
+                            s3_model_path=S3_MODEL_PATH,
+                            local_dir=LOCAL_MODEL_DIR,
+                            required_files=REQUIRED_FILES)
+    
     tokenizer = AutoTokenizer.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE)
-    base_model = AutoModelForCausalLM.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, torch_dtype=torch.float32)
-    print("✅ Complete the loading Model & tokenizer!")
+    base_model = AutoModelForCausalLM.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, torch_dtype=torch.float32).to(device)
 
-except Exception as e:
-    print(f"❌ Fail loading model: {e}")
+    # Apply LoRA setting
+    lora_config = LoraConfig(
+        r=8,
+        lora_alpha=32,
+        lora_dropout=0.1,
+        bias="none",
+        task_type="CAUSAL_LM"
+    )
+    model = get_peft_model(base_model, lora_config)
 
-base_model = prepare_model_for_kbit_training(base_model)
+    # Prepare the data
+    prompts = get_prompts_from_s3_dataset(s3_dataset_key)
+    dataset = PromptDataset(prompts, tokenizer)
+    dataloader = DataLoader(dataset, batch_size=2, suffle=True)
 
-# LoRA settings (set to work on CPU as well)
-lora_config = LoraConfig(
-    r=8,  # Rank (The lower the memory, the less memory used)
-    lora_alpha=32,
-    lora_dropout=0.1,
-    bias="none",
-    task_type="CAUSAL_LM"
-)
+    # Train
+    model.train()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 
-# Apply LoRA
-model = get_peft_model(base_model, lora_config)
+    for epoch in range(3):
+        total_loss = 0
+        for batch in dataloader:
+            batch = {k: v.to(device) for k, v in batch.items()}
+            outputs = model(**batch)
+            loss = outputs.loss
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            total_loss += loss.item()
+        
+        print(f"Epoch {epoch+1} - Loss: {total_loss: .4f}")
 
-# Check LoRA applied
-print("LoRA applied (CPU optimization)")
+    # Save and upload to S3
+    model.eval()
+    model.save_pretrained(SAVE_PATH)
+    tokenizer.save_pretrained(SAVE_PATH)
 
-# -------------- Test ----------
-prompt = "The future of AI is"
-inputs = tokenizer(prompt, return_tensors="pt")
-labels = inputs.input_ids.clone()
-inputs["labels"] = labels
+    s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
+    for file in os.listdir(SAVE_PATH):
+        s3.upload_file(os.path.join(SAVE_PATH, file), S3_BUCKET_NAME, f"models/lora_finetuned/{file}")
 
-# Train loop
-model.train()
-optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
-
-for epoch in range(3):
-    optimizer.zero_grad()
-    outputs = model(**inputs)
-    loss = outputs.loss
-    loss.backward()
-    optimizer.step()
-    print(f"Epoch {epoch+1} - Loss: {loss.item(): .4f}")
-
-# Save trained model
-SAVE_PATH = "./tmp/lora_finetuned_model"
-model.save_pretrained(SAVE_PATH)
-tokenizer.save_pretrained(SAVE_PATH)
-
-# Upload the trained model to S3
-for file in os.listdir(SAVE_PATH):
-    s3.upload_file(os.path.join(SAVE_PATH, file), S3_BUCKET_NAME, f"models/lora_finetuned/{file}")
-print("LoRA fine-tuned model uploaded to S3.")
