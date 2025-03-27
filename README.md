@@ -52,6 +52,18 @@ Built with custom machine learning models, optimized for deployment on AWS, and 
   
 ---
   
+## 📦 Architecture
+
+Here's a simplified view of the system flow:  
+  
+User → Web UI (Flask) → Model Selector → ML Training/Prediction  
+          ↓                     ↓  
+      AI Q&A (RAG)        S3: Model, Logs, Results  
+          ↓  
+   TinyLlama + LoRA  
+  
+---  
+  
 ## 🗂️ Project Structure
 <pre>
 <code>
@@ -80,6 +92,7 @@ project/
 ---
   
 ## 👤 Author
+  
 **namdarine** - _No-Code AI Engineer_  
 🚀 Live App: [https://automlplatform.tech/](https://automlplatform.tech/)  
 🧑‍💻 Portfolio: [https://namdarine.github.io](https://namdarine.github.io)  
@@ -90,6 +103,24 @@ Passionate about making AI more accessible, and empowering users to build AI wit
   
 ---
   
+## 🌟 Vision
+  
+I believe that AI should be created, understood, and used by everyone - not just engineers.  
+  
+This project is part of my mission to break down the barrier between people and AI by providing a no-code, accessible platform.  
+It reflects my core belief:  
+  
+> "AI should not be something controlled by a few.  
+> It should be a tool that anyone can create with, lead, and understand."  
+  
+🧠 Philosophy: *"AI belongs to everyone."*  
+💡 Mission: *"Empowering AI Without Code."* / *"Making AI More Accessible."*  
+  
+This belief drives the brand identity behind **namdarine** and my long-term goal to design a future where AI is truly a digital right, not a technical privilege.  
+  
+---
+  
 ## 📄 License
+  
 This project is licensed under the MIT License.  
 See the [LICENSE](LICENSE) file for details.

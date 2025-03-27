@@ -14,7 +14,7 @@ import pandas as pd
 from fpdf import FPDF
 import pickle
 import torch
-from rag_qa import load_qa_pipeline
+from rag_qa import get_qa_pipeline
 from lora_train import model, tokenizer
 from utils.download_utils import load_model_from_s3
 
@@ -75,9 +75,6 @@ current_filename = None
 
 device = "cpu"
 model.to(device)
-
-# Reset RAG QA Pipeline
-qa_pipeline = load_qa_pipeline()
 
 @app.route('/')
 def home():
@@ -424,8 +421,10 @@ def ask_question():
     question = data.get("question", "")
     input_data = data.get("input_data", None)       # New data entered by the user
 
-    # Generating RAG-based responses
+    # Dynamically load QA pipeline when needed
     try:
+        # Reset RAG QA Pipeline
+        qa_pipeline = get_qa_pipeline()
         rag_response = qa_pipeline.run(question)
     except Exception as e:
         rag_response = f"Error during RAG processing: {str(e)}"

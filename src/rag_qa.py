@@ -29,26 +29,32 @@ REQUIRED_FILES = {
     "model.safetensors"
 }
 
-def load_qa_pipeline():
+# Lazy-load cache
+_qa_pipeline = None
+
+def get_qa_pipeline():
     """
     Initialize a system that finds similar documents when asked and causes LLM to generate answers
     """
-    print(f"[DEBUG] Loading vector DB from {CHROMA_PATH}")
-    download_llm_model_from_s3(S3_REGION=S3_REGION,
-                               S3_BUCKET_NAME=S3_BUCKET_NAME,
-                               s3_model_path=S3_MODEL_PATH,
-                               local_dir=LLM_MODEL_PATH,
-                               required_files=REQUIRED_FILES)
+    global _qa_pipeline
+    if _qa_pipeline is not None:
+        return _qa_pipeline
+    
+    print(f"[DEBUG] Downloading + Loading RAG pipeline...")
+    download_llm_model_from_s3(
+        S3_REGION=S3_REGION,
+        S3_BUCKET_NAME=S3_BUCKET_NAME,
+        s3_model_path=S3_MODEL_PATH,
+        local_dir=LLM_MODEL_PATH,
+        required_files=REQUIRED_FILES
+    )
 
-    # Import embeddings and vector stores
     embedding_function = HuggingFaceEmbeddings(model_name=EMBED_MODEL_NAME)
     vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
-    # Load LLM
     tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_PATH, cache_dir=HF_CACHE)
     model = AutoModelForCausalLM.from_pretrained(LLM_MODEL_PATH, cache_dir=HF_CACHE)
 
-    # Configuring Generation Pipeline
     llm_pipeline = pipeline(
         "text-generation",
         model=model,
@@ -59,18 +65,18 @@ def load_qa_pipeline():
         top_p=0.95
     )
 
-    # Retrieval QA Chain Configuration
     llm = huggingface_pipeline(pipeline=llm_pipeline)
-    qa = retrieval_qa.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
+    _qa_pipeline = retrieval_qa.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
 
-    print("Pipeline loaded")
-    return qa
+    print("QA Pipeline fully loaded.")
+    
+    return _qa_pipeline
 
 def run_qa(query: str) -> str:
     """
     Create a RAG QA response to a user's question
     """
-    qa = load_qa_pipeline()
+    qa = get_qa_pipeline()
     response = qa.run(query)
 
     return response
