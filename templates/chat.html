@@ -29,7 +29,7 @@
         const task = urlParams.get("task") || "unknown";
         const filename = urlParams.get("filename") || "unknown";
 
-        document.getElementById("task-info").innerText = `Current Task: ${task}`;
+        document.getElementById("task-info").innerText = `🔧 Task: ${task} | 📁 Dataset: ${filename}`;
 
         const chatBox = document.getElementById("chat-box");
         const spinner = document.getElementById("spinner");

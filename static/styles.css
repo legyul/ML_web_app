@@ -159,25 +159,28 @@ pre {
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
-    padding-bottom: 120px;
+    padding-bottom: 80px;
 }
 
 .chat-container {
     max-width: 800px;
-    margin: auto;
+    margin: 0 auto;
     padding: 20px;
     display: flex;
     flex-direction: column;
     flex: 1;
+    width: 100%;
 }
 
 .chat-box {
+    flex: 1;
     background: #f7f7f7;
     border-radius: 10px;
     padding: 20px;
-    height: 400px;
+    height: auto;
+    min-height: 0;
     overflow-y: auto;
-    margin-bottom: 20px;
+    margin-bottom: 1rem;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
@@ -242,3 +245,23 @@ pre {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+@media (max-width: 768px) {
+    .chat-container {
+      padding: 10px;
+    }
+  
+    .chat-box {
+      padding: 10px;
+    }
+  
+    .input-row {
+      flex-direction: column;
+      gap: 8px;
+    }
+  
+    .input-row input,
+    .input-row button {
+      width: 100%;
+    }
+  }
