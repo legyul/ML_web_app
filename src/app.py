@@ -205,6 +205,9 @@ def process_classification(filename):
 @app.route('/start_classification/<filename>', methods=['POST'])
 def start_classification(filename):
     global progress_status
+
+    session['filename'] = filename
+
     data = request.json
 
     model_choice = data.get("model_choice")
@@ -262,8 +265,11 @@ def classification_result():
         flash("Error: Missing classification result data. Please try again.")
         return redirect(url_for('home'))
     
+    filename = session.get('filename', 'unknown')
+
     return render_template(
         'classification_result.html',
+        filename=filename,
         pdf_url=pdf_url,
         model_url=model_url,
         log_url=log_url
