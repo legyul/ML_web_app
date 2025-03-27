@@ -408,9 +408,9 @@ def generate_presigned_url(bucket_name, s3_key, expiration=36000):
 
 #------------------LLM-----------------------
 @app.route('/chat')
-def chat_interface():
+def chat_interface(filename):
     task = request.args.get("task", "unknown")
-    filename = request.args.get("filename", "unknown")
+    #filename = request.args.get("filename", "unknown")
     return render_template("chat.html", task=task, filename=filename)
 
 @app.route('/ask', methods=['POST'])
