@@ -221,7 +221,10 @@ def start_classification(filename):
     try:
         try:
             pdf_file, model_buffer = run_classification(s3_file_path, model_choice=model_choice)
-            train_lora_from_user_data(filename)
+            try:
+                train_lora_from_user_data(filename)
+            except Exception as e:
+                print(f"[LoRA ERROR] Fine-tuning failed: {e}")
         except Exception as e:
             return jsonify({"error": "Error during classification processing."}), 500
 
