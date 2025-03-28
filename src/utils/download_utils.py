@@ -48,6 +48,10 @@ def download_llm_model_from_s3(S3_REGION, S3_BUCKET_NAME, s3_model_path, local_d
             if not filename or filename.startswith(".") or filename.endswith("/"):
                 continue
 
+            for obj in response["Contents"]:
+                key = obj["Key"]
+                logger.info(f"[S3] Found key: {key}")
+
             if required_files is None or filename in required_files:
                 dest_path = os.path.join(local_dir, filename)
                 logger.info(f"files: {filename}")

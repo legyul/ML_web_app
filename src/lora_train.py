@@ -124,6 +124,7 @@ def train_lora_from_user_data(s3_dataset_key: str):
 
     model.save_pretrained(SAVE_PATH)
     tokenizer.save_pretrained(SAVE_PATH)
+    logger.info("Saving base model weights...")
     model.base_model.save_pretrained(SAVE_PATH)
 
     base_config_path = os.path.join(LOCAL_MODEL_DIR, "config.json")
