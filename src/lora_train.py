@@ -94,7 +94,7 @@ def train_lora_from_user_data(s3_dataset_key: str):
     # Prepare the data
     prompts = get_prompts_from_s3_dataset(s3_dataset_key)
     dataset = PromptDataset(prompts, tokenizer)
-    dataloader = DataLoader(dataset, batch_size=2, suffle=True)
+    dataloader = DataLoader(dataset, batch_size=2, shuffle=True)
 
     # Train
     model.train()
