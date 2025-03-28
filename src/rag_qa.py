@@ -17,7 +17,7 @@ HF_CACHE = "/tmp/hf_cache"
 
 S3_REGION = os.getenv("AWS_REGION")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
-S3_MODEL_PATH = "models/tinyllama_model"
+S3_MODEL_PATH = "models/tinyllama_model/"
 
 REQUIRED_FILES = [
     "config.json",

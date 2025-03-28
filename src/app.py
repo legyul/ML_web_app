@@ -14,7 +14,7 @@ import pandas as pd
 from fpdf import FPDF
 import pickle
 import torch
-from rag_qa import get_qa_pipeline
+from rag_qa import run_qa
 from utils.download_utils import load_model_from_s3, download_llm_model_from_s3
 from lora_train import train_lora_from_user_data
 import threading
@@ -444,8 +444,7 @@ def ask_question():
     # Dynamically load QA pipeline when needed
     try:
         # Reset RAG QA Pipeline
-        qa_pipeline = get_qa_pipeline()
-        rag_response = qa_pipeline.run(question)
+        rag_response = run_qa(question)
         context = f"RAG response: {rag_response}"
     except Exception as e:
         rag_response = f"Error during RAG processing: {str(e)}"
