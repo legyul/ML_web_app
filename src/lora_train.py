@@ -14,26 +14,6 @@ from utils.logger_utils import logger
 
 load_dotenv()
 
-# Set S3 & Local path
-S3_REGION = os.getenv("AWS_REGION")
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
-S3_MODEL_PATH = "models/tinyllama_model/"
-LOCAL_MODEL_DIR = "/tmp/tinyllama_model"
-HF_CACHE = "/tmp/hf_cache"
-SAVE_PATH = "/tmp/lora_finetuned_model"
-
-s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
-
-REQUIRED_FILES = {
-    "config.json",
-    "tokenizer_config.json",
-    "tokenizer.json",
-    "tokenizer.model",
-    "special_tokens_map.json",
-    "generation_config.json",
-    "model.safetensors"
-}
-
 device = torch.device("cpu")
 
 def get_prompts_from_s3_dataset(s3_key: str) -> list[str]:
@@ -70,6 +50,24 @@ class PromptDataset(Dataset):
 def train_lora_from_user_data(s3_dataset_key: str):
     logger.debug("[DEBUG] Entered train_lora_from_user_data()")
     logger.debug("[DEBUG] Step 1: Starting model download")
+
+    S3_REGION = os.getenv("AWS_REGION")
+    S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+    S3_MODEL_PATH = "models/tinyllama_model/"
+    LOCAL_MODEL_DIR = "/tmp/tinyllama_model"
+    HF_CACHE = "/tmp/hf_cache"
+    SAVE_PATH = "/tmp/lora_finetuned_model"
+
+    REQUIRED_FILES = {
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "tokenizer.model",
+        "special_tokens_map.json",
+        "generation_config.json",
+        "model.safetensors"
+    }
+
     # Download model
     download_llm_model_from_s3(S3_REGION=S3_REGION,
                             S3_BUCKET_NAME=S3_BUCKET_NAME,
