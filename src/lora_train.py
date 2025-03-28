@@ -123,7 +123,7 @@ def train_lora_from_user_data(s3_dataset_key: str):
     print(f"[DEBUG] Target config path: {target_config_path}")
     print(f"[DEBUG] Does base config exist? {os.path.exists(base_config_path)}")
 
-    if os.path.exists(base_config_path):
+    if not os.path.exists(base_config_path):
         import shutil
         try:
             shutil.copy(base_config_path, target_config_path)
