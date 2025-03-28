@@ -110,6 +110,9 @@ def train_lora_from_user_data(s3_dataset_key: str):
 
     # Save and upload to S3
     model.eval()
+    
+    os.makedirs(SAVE_PATH, exist_ok=True)
+
     model.save_pretrained(SAVE_PATH)
     tokenizer.save_pretrained(SAVE_PATH)
 
