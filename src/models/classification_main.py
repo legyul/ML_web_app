@@ -21,12 +21,15 @@ def run_classification(file_key, model_choice):
     title = Paragraph(f"Classification {model_choice} Report", styles['Title'])
     file_name_para = Paragraph(f"File Name: {filename}", styles['Normal'])
 
+    print("[DEBUG] Loading file...")
     df, _ = load_file(file_key)
 
+    print("[DEBUG] Preprocessing text columns...")
     df, target, language_column, bow_list = preprocess.preprocess_text_columns(df)
 
     regression = preprocess.is_continuous_data  # T- regression, F - classification
     
+    print("[DEBUG] Running individual model or best model...")
     mode = None
     if regression == True:
         mode = 'regression'
