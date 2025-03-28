@@ -209,9 +209,9 @@ def start_classification(filename):
     print(f"[DEBUG] received filename: {filename}")
 
     session['filename'] = filename
-    print(f"[DEBUG] received data: {data}")
 
     data = request.json
+    print(f"[DEBUG] received data: {data}")
 
     model_choice = data.get("model_choice")
 
