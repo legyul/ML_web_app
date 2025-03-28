@@ -205,7 +205,11 @@ def process_classification(filename):
 def start_classification(filename):
     global progress_status
 
+    print("[DEBUG] entered start_classification")
+    print(f"[DEBUG] received filename: {filename}")
+
     session['filename'] = filename
+    print(f"[DEBUG] received data: {data}")
 
     data = request.json
 
@@ -220,6 +224,7 @@ def start_classification(filename):
 
     try:
         try:
+            print("[DEBUG] calling run_classification")
             pdf_file, model_buffer = run_classification(s3_file_path, model_choice=model_choice)
             print("[DEBUG] Classification completed")
             print("[DEBUG] Calling train_lora_from_user_data")
@@ -227,6 +232,7 @@ def start_classification(filename):
             print("[DEBUG] LoRA fine-tuning completed")
         
         except Exception as e:
+            print(f"[ERROR] Exception in run_classification: {str(e)}")
             return jsonify({"error": "Error during classification processing."}), 500
 
         model_filename = f'{filename}_{model_choice}_model_and_info.zip'

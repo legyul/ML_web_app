@@ -10,6 +10,9 @@ import io
 import zipfile
 
 def run_classification(file_key, model_choice):
+    print("[DEBUG] Entered run_classification")
+    print(f"[DEBUG] file_key: {file_key}")
+    print(f"[DEBUG] model_choice: {model_choice}")
     filename = Path(file_key).stem
 
     model_info_buffer = io.BytesIO()
@@ -23,6 +26,8 @@ def run_classification(file_key, model_choice):
 
     print("[DEBUG] Loading file...")
     df, _ = load_file(file_key)
+    print("[DEBUG] File loaded")
+    print(df.head())
 
     print("[DEBUG] Preprocessing text columns...")
     df, target, language_column, bow_list = preprocess.preprocess_text_columns(df)
