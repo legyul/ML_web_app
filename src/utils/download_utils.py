@@ -5,6 +5,7 @@ import boto3
 from botocore.exceptions import NoCredentialsError
 import zipfile
 import pickle
+from utils.logger_utils import logger
 
 def download_llm_model_from_s3(
         S3_REGION: str,
@@ -23,13 +24,14 @@ def download_llm_model_from_s3(
     - local_dir: local directory to save model files (e.g. "/tmp/tinyllama_model")
     - required_files: optional set of file name to download; if None, download all found files
     """
-    print(f" Checking if model exists at: {local_dir}")
+    from botocore.exceptions import ClientError
+    logger.info(f"Checking if model exists at: {local_dir}")
 
     if os.path.exists(local_dir) and len(os.listdir(local_dir)) > 0:
-        print("Model already exists locally.")
+        logger.info("Model already exists locally.")
         return
     
-    print(f"Model not found locally. Downloading from S3: {s3_model_path}")
+    logger.info(f"Model not found locally. Downloading from S3: {s3_model_path}")
 
     if os.path.exists(local_dir):
         shutil.rmtree(local_dir)
@@ -48,11 +50,15 @@ def download_llm_model_from_s3(
                 if required_files is None or filename in required_files:
                     dest_path = os.path.join(local_dir, filename)
                     
-                    print(f"Downloading: {filename}")
-                    s3.download_file(S3_BUCKET_NAME, obj["Key"], dest_path)
+                    try:
+                        logger.debug(f"Downloading: {filename}")
+                        s3.download_file(S3_BUCKET_NAME, obj["Key"], dest_path)
+                    except ClientError as e:
+                        logger.error(f"Failed to download {filename} from S3: {e}")
+
             
         else:
-            print(f"No model files found in S3 path: {s3_model_path}")
+            logger.error(f"No model files found in S3 path: {s3_model_path}")
     
     except NoCredentialsError:
         print("AWS credentials not found! Run 'aws configure' or check environment.")
