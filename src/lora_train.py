@@ -110,8 +110,12 @@ def train_lora_from_user_data(s3_dataset_key: str):
 
     # Save and upload to S3
     model.eval()
-    
-    os.makedirs(SAVE_PATH, exist_ok=True)
+
+    if not os.path.exists(SAVE_PATH):
+        os.makedirs(SAVE_PATH)
+        print(f"[DEBUG] Created directory: {SAVE_PATH}")
+    else:
+        print(f"[DEBUG] Directory already exists: {SAVE_PATH}")
 
     model.save_pretrained(SAVE_PATH)
     tokenizer.save_pretrained(SAVE_PATH)
@@ -123,7 +127,7 @@ def train_lora_from_user_data(s3_dataset_key: str):
     print(f"[DEBUG] Target config path: {target_config_path}")
     print(f"[DEBUG] Does base config exist? {os.path.exists(base_config_path)}")
 
-    if not os.path.exists(base_config_path):
+    if os.path.exists(base_config_path):
         import shutil
         try:
             shutil.copy(base_config_path, target_config_path)
