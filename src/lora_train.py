@@ -39,6 +39,7 @@ def get_prompts_from_s3_dataset(s3_key: str) -> list[str]:
     """
     Convert user uploaded data to training sentence
     """
+    print(f"[DEBUG] Loading prompts from dataset key: {s3_key}")
     df, _ = load_file(s3_key)
     prompts = []
 
@@ -66,16 +67,20 @@ class PromptDataset(Dataset):
         return len(self.labels)
     
 def train_lora_from_user_data(s3_dataset_key: str):
+    print("[DEBUG] Entered train_lora_from_user_data()")
+    print("[DEBUG] Step 1: Starting model download")
     # Download model
     download_llm_model_from_s3(S3_REGION=S3_REGION,
                             S3_BUCKET_NAME=S3_BUCKET_NAME,
                             s3_model_path=S3_MODEL_PATH,
                             local_dir=LOCAL_MODEL_DIR,
                             required_files=REQUIRED_FILES)
-    
+    print("[DEBUG] Step 2: Model download complete")
+    print("[DEBUG] Step 3: Loading tokenizer and base model")
     tokenizer = AutoTokenizer.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE)
     base_model = AutoModelForCausalLM.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, torch_dtype=torch.float32).to(device)
 
+    print("[DEBUG] Step 4: Preparing LoRA config")
     # Apply LoRA setting
     lora_config = LoraConfig(
         r=8,
