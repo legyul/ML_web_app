@@ -49,10 +49,12 @@ def download_llm_model_from_s3(
 
                 if required_files is None or filename in required_files:
                     dest_path = os.path.join(local_dir, filename)
+                    logger.info(f"files: {filename}")
                     
                     try:
                         logger.debug(f"Downloading: {filename}")
                         s3.download_file(S3_BUCKET_NAME, obj["Key"], dest_path)
+                        logger.info("Completed to download the model")
                     except ClientError as e:
                         logger.error(f"Failed to download {filename} from S3: {e}")
 
