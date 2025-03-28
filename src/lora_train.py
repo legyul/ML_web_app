@@ -58,7 +58,7 @@ def train_lora_from_user_data(s3_dataset_key: str):
     HF_CACHE = "/tmp/hf_cache"
     SAVE_PATH = "/tmp/lora_finetuned_model"
 
-    REQUIRED_FILES = {
+    REQUIRED_FILES = [
         "config.json",
         "tokenizer_config.json",
         "tokenizer.json",
@@ -66,7 +66,7 @@ def train_lora_from_user_data(s3_dataset_key: str):
         "special_tokens_map.json",
         "generation_config.json",
         "model.safetensors"
-    }
+    ]
 
     # Download model
     download_llm_model_from_s3(S3_REGION=S3_REGION,

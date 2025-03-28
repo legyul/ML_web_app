@@ -19,7 +19,7 @@ S3_REGION = os.getenv("AWS_REGION")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 S3_MODEL_PATH = "models/tinyllama_model"
 
-REQUIRED_FILES = {
+REQUIRED_FILES = [
     "config.json",
     "tokenizer_config.json",
     "tokenizer.json",
@@ -27,7 +27,7 @@ REQUIRED_FILES = {
     "special_tokens_map.json",
     "generation_config.json",
     "model.safetensors"
-}
+]
 
 # Lazy-load cache
 _qa_pipeline = None
