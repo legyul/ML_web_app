@@ -206,13 +206,13 @@ def process_classification(filename):
 def start_classification(filename):
     global progress_status
 
-    print("[DEBUG] entered start_classification")
-    print(f"[DEBUG] received filename: {filename}")
+    logger.debug("[DEBUG] entered start_classification")
+    logger.debug(f"[DEBUG] received filename: {filename}")
 
     session['filename'] = filename
 
     data = request.json
-    print(f"[DEBUG] received data: {data}")
+    logger.debug(f"[DEBUG] received data: {data}")
 
     model_choice = data.get("model_choice")
 
@@ -225,14 +225,14 @@ def start_classification(filename):
 
     try:
         try:
-            print("[DEBUG] calling run_classification")
+            logger.debug("[DEBUG] calling run_classification")
             pdf_file, model_buffer = run_classification(s3_file_path, model_choice=model_choice)
-            print("[DEBUG] Classification completed")
-            print("[DEBUG] Calling train_lora_from_user_data")
+            logger.debug("[DEBUG] Classification completed")
+            logger.debug("[DEBUG] Calling train_lora_from_user_data")
             threading.Thread(target=train_lora_from_user_data, args=(filename,)).start()
         
         except Exception as e:
-            print(f"[ERROR] Exception in run_classification: {str(e)}")
+            logger.error(f"[ERROR] Exception in run_classification: {str(e)}")
             return jsonify({"error": "Error during classification processing."}), 500
 
         model_filename = f'{filename}_{model_choice}_model_and_info.zip'

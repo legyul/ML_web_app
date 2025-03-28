@@ -10,6 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 import shutil
 from utils.download_utils import download_llm_model_from_s3
 from models.common import load_file
+from utils.logger_utils import logger
 
 load_dotenv()
 
@@ -39,7 +40,7 @@ def get_prompts_from_s3_dataset(s3_key: str) -> list[str]:
     """
     Convert user uploaded data to training sentence
     """
-    print(f"[DEBUG] Loading prompts from dataset key: {s3_key}")
+    logger.debug(f"[DEBUG] Loading prompts from dataset key: {s3_key}")
     df, _ = load_file(s3_key)
     prompts = []
 
@@ -67,20 +68,21 @@ class PromptDataset(Dataset):
         return len(self.labels)
     
 def train_lora_from_user_data(s3_dataset_key: str):
-    print("[DEBUG] Entered train_lora_from_user_data()")
-    print("[DEBUG] Step 1: Starting model download")
+    logger.debug("[DEBUG] Entered train_lora_from_user_data()")
+    logger.debug("[DEBUG] Step 1: Starting model download")
     # Download model
     download_llm_model_from_s3(S3_REGION=S3_REGION,
                             S3_BUCKET_NAME=S3_BUCKET_NAME,
                             s3_model_path=S3_MODEL_PATH,
                             local_dir=LOCAL_MODEL_DIR,
                             required_files=REQUIRED_FILES)
-    print("[DEBUG] Step 2: Model download complete")
-    print("[DEBUG] Step 3: Loading tokenizer and base model")
+    logger.debug("[DEBUG] Step 2: Model download complete")
+
+    logger.debug("[DEBUG] Step 3: Loading tokenizer and base model")
     tokenizer = AutoTokenizer.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE)
     base_model = AutoModelForCausalLM.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, torch_dtype=torch.float32).to(device)
 
-    print("[DEBUG] Step 4: Preparing LoRA config")
+    logger.debug("[DEBUG] Step 4: Preparing LoRA config")
     # Apply LoRA setting
     lora_config = LoraConfig(
         r=8,
@@ -111,16 +113,16 @@ def train_lora_from_user_data(s3_dataset_key: str):
             optimizer.zero_grad()
             total_loss += loss.item()
         
-        print(f"Epoch {epoch+1} - Loss: {total_loss: .4f}")
+        logger.info(f"Epoch {epoch+1} - Loss: {total_loss: .4f}")
 
     # Save and upload to S3
     model.eval()
 
     if not os.path.exists(SAVE_PATH):
         os.makedirs(SAVE_PATH)
-        print(f"[DEBUG] Created directory: {SAVE_PATH}")
+        logger.debug(f"[DEBUG] Created directory: {SAVE_PATH}")
     else:
-        print(f"[DEBUG] Directory already exists: {SAVE_PATH}")
+        logger.debug(f"[DEBUG] Directory already exists: {SAVE_PATH}")
 
     model.save_pretrained(SAVE_PATH)
     tokenizer.save_pretrained(SAVE_PATH)
@@ -128,15 +130,15 @@ def train_lora_from_user_data(s3_dataset_key: str):
     base_config_path = os.path.join(LOCAL_MODEL_DIR, "config.json")
     target_config_path = os.path.join(SAVE_PATH, "config.json")
 
-    print(f"[DEBUG] Base config path: {base_config_path}")
-    print(f"[DEBUG] Target config path: {target_config_path}")
-    print(f"[DEBUG] Does base config exist? {os.path.exists(base_config_path)}")
+    logger.debug(f"[DEBUG] Base config path: {base_config_path}")
+    logger.debug(f"[DEBUG] Target config path: {target_config_path}")
+    logger.debug(f"[DEBUG] Does base config exist? {os.path.exists(base_config_path)}")
 
     if os.path.exists(base_config_path):
         import shutil
         try:
             shutil.copy(base_config_path, target_config_path)
-            print("[DEBUG] config.json copied.")
+            logger.debug("[DEBUG] config.json copied.")
 
             # If there is no model_type, add it
             import json
@@ -150,16 +152,16 @@ def train_lora_from_user_data(s3_dataset_key: str):
                     with open(target_config_path, "w") as f:
                         json.dump(config_data, f, indent=2)
                     
-                    print("config.json copied and updated.")
+                    logger.debug("config.json copied and updated.")
             
             except Exception as json_err:
-                print(f"[ERROR] Failed to read or update config.json: {json_err}")
+                logger.error(f"[ERROR] Failed to read or update config.json: {json_err}")
         
         except Exception as copy_err:
-            print(f"[ERROR] Failed to copy config.json: {copy_err}")
+            logger.error(f"[ERROR] Failed to copy config.json: {copy_err}")
     
     else:
-        print("Base model config.json not found.")
+        logger.error("Base model config.json not found.")
 
 
     s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
