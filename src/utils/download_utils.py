@@ -7,13 +7,7 @@ import zipfile
 import pickle
 from utils.logger_utils import logger
 
-def download_llm_model_from_s3(
-        S3_REGION: str,
-        S3_BUCKET_NAME: str,
-        s3_model_path: str,
-        local_dir: str,
-        required_files: set = None
-):
+def download_llm_model_from_s3(S3_REGION, S3_BUCKET_NAME, s3_model_path, local_dir, required_files):
     """
     Download LLM model files (e.g. for RAG or LoRA) from S3 to local directory
 
@@ -43,20 +37,27 @@ def download_llm_model_from_s3(
     try:
         response = s3.list_objects_v2(Bucket=S3_BUCKET_NAME, Prefix=s3_model_path)
 
-        if "Contents" in response:
-            for obj in response["Contents"]:
-                filename = os.path.basename(obj["Key"])
+        if "Contents" not in response:
+            logger.error(f"No files found in S3 at {s3_model_path}")
+            return
 
-                if required_files is None or filename in required_files:
-                    dest_path = os.path.join(local_dir, filename)
-                    logger.info(f"files: {filename}")
-                    
-                    try:
-                        logger.debug(f"Downloading: {filename}")
-                        s3.download_file(S3_BUCKET_NAME, obj["Key"], dest_path)
-                        logger.info("Completed to download the model")
-                    except ClientError as e:
-                        logger.error(f"Failed to download {filename} from S3: {e}")
+        for obj in response["Contents"]:
+            key = obj["Key"]
+            filename = os.path.basename(key)
+
+            if not filename or filename.startswith(".") or filename.endswith("/"):
+                continue
+
+            if required_files is None or filename in required_files:
+                dest_path = os.path.join(local_dir, filename)
+                logger.info(f"files: {filename}")
+                
+                try:
+                    logger.debug(f"Downloading: {filename}")
+                    s3.download_file(S3_BUCKET_NAME, key, dest_path)
+                    logger.info("Completed to download the model")
+                except ClientError as e:
+                    logger.error(f"Failed to download {filename} from S3: {e}")
 
             
         else:
