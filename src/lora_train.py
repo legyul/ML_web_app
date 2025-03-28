@@ -17,7 +17,7 @@ load_dotenv()
 S3_REGION = os.getenv("AWS_REGION")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 S3_MODEL_PATH = "models/tinyllama_model/"
-LOCAL_MODEL_DIR = "./tmp/tinyllama_model"
+LOCAL_MODEL_DIR = "/tmp/tinyllama_model"
 HF_CACHE = "/tmp/hf_cache"
 SAVE_PATH = "/tmp/lora_finetuned_model"
 
@@ -112,6 +112,30 @@ def train_lora_from_user_data(s3_dataset_key: str):
     model.eval()
     model.save_pretrained(SAVE_PATH)
     tokenizer.save_pretrained(SAVE_PATH)
+
+    base_config_path = os.path.join(LOCAL_MODEL_DIR, "config.json")
+    target_config_path = os.path.join(SAVE_PATH, "config.json")
+
+    if os.path.exists(base_config_path):
+        import shutil
+        shutil.copy(base_config_path, target_config_path)
+
+        # If there is no model_type, add it
+        import json
+        with open(target_config_path, "r") as f:
+            config_data = json.load(f)
+
+            if "model_type" not in config_data:
+                config_data["model_type"] = "llama"
+            
+            with open(target_config_path, "w") as f:
+                json.dump(config_data, f, indent=2)
+            
+            print("config.json copied and updated.")
+    
+    else:
+        print("Base model config.json not found.")
+
 
     s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
     for file in os.listdir(SAVE_PATH):
