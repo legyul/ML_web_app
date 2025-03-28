@@ -119,22 +119,35 @@ def train_lora_from_user_data(s3_dataset_key: str):
     base_config_path = os.path.join(LOCAL_MODEL_DIR, "config.json")
     target_config_path = os.path.join(SAVE_PATH, "config.json")
 
+    print(f"[DEBUG] Base config path: {base_config_path}")
+    print(f"[DEBUG] Target config path: {target_config_path}")
+    print(f"[DEBUG] Does base config exist? {os.path.exists(base_config_path)}")
+
     if os.path.exists(base_config_path):
         import shutil
-        shutil.copy(base_config_path, target_config_path)
+        try:
+            shutil.copy(base_config_path, target_config_path)
+            print("[DEBUG] config.json copied.")
 
-        # If there is no model_type, add it
-        import json
-        with open(target_config_path, "r") as f:
-            config_data = json.load(f)
+            # If there is no model_type, add it
+            import json
+            try:
+                with open(target_config_path, "r") as f:
+                    config_data = json.load(f)
 
-            if "model_type" not in config_data:
-                config_data["model_type"] = "llama"
+                    if "model_type" not in config_data:
+                        config_data["model_type"] = "llama"
+                    
+                    with open(target_config_path, "w") as f:
+                        json.dump(config_data, f, indent=2)
+                    
+                    print("config.json copied and updated.")
             
-            with open(target_config_path, "w") as f:
-                json.dump(config_data, f, indent=2)
-            
-            print("config.json copied and updated.")
+            except Exception as json_err:
+                print(f"[ERROR] Failed to read or update config.json: {json_err}")
+        
+        except Exception as copy_err:
+            print(f"[ERROR] Failed to copy config.json: {copy_err}")
     
     else:
         print("Base model config.json not found.")
