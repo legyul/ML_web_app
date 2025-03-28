@@ -17,6 +17,7 @@ import torch
 from rag_qa import get_qa_pipeline
 from utils.download_utils import load_model_from_s3, download_llm_model_from_s3
 from lora_train import train_lora_from_user_data
+import threading
 
 # Load environment variables from .env file
 load_dotenv()
@@ -228,8 +229,7 @@ def start_classification(filename):
             pdf_file, model_buffer = run_classification(s3_file_path, model_choice=model_choice)
             print("[DEBUG] Classification completed")
             print("[DEBUG] Calling train_lora_from_user_data")
-            train_lora_from_user_data(filename)
-            print("[DEBUG] LoRA fine-tuning completed")
+            threading.Thread(target=train_lora_from_user_data, args=(filename,)).start()
         
         except Exception as e:
             print(f"[ERROR] Exception in run_classification: {str(e)}")
