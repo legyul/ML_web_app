@@ -17,7 +17,7 @@ import torch
 from rag_index import create_vectorstore_from_s3
 from rag_qa import run_qa
 from utils.download_utils import load_model_from_s3, download_llm_model_from_s3, download_model_from_huggingface
-from lora_train import train_lora_from_user_data
+from lora_train import train_lora_from_user_data, get_finedtuned_model_path
 import threading
 
 # Load environment variables from .env file
@@ -55,10 +55,11 @@ if SparkContext._active_spark_context:
 sc = SparkSession.builder.config(conf=conf).getOrCreate()
 
 S3_REGION = "us-east-2"
+S3_BUCKET_NAME = "ml-platform-service"
+
 # S3 Client configuration
 s3 = boto3.client('s3', region_name=S3_REGION, config=boto3.session.Config(signature_version='s3v4'))
 
-S3_BUCKET_NAME = "ml-platform-service"
 
 UPLOAD_FOLDER = '/tmp'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -237,7 +238,7 @@ def start_classification(filename):
             create_vectorstore_from_s3(s3_file_path)
 
             logger.debug("[DEBUG] Calling train_lora_from_user_data")
-            threading.Thread(target=train_lora_from_user_data, args=(filename,)).start()
+            threading.Thread(target=train_lora_from_user_data(filename, model_choice), args=(filename,)).start()
         
         except Exception as e:
             logger.error(f"[ERROR] Exception in run_classification: {str(e)}")
@@ -444,6 +445,7 @@ def ask_question():
     data = request.json
     task = data.get("task", "unknown")      # Clustering or Classification
     filename = data.get("filename", "unknown")
+    model_choice = data.get("model_choice", "unknown")
     question = data.get("question", "")
     input_data = data.get("input_data", None)       # New data entered by the user
 
@@ -499,10 +501,13 @@ def ask_question():
                 LOCAL_LORA_PATH,
                 REQUIRED_FILES
             )
+        
+        model_path = get_finedtuned_model_path(filename, model_choice)
+        tokenizer_path = model_path + "_tokenizer"
 
         # Load tokenizer and model
-        tokenizer = AutoTokenizer.from_pretrained(LOCAL_LORA_PATH, cache_dir=HF_CACHE)
-        model = AutoModelForCausalLM.from_pretrained(LOCAL_LORA_PATH, cache_dir=HF_CACHE, torch_dtyp=torch.float32, device_map="auto", use_safetensors=True)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, cache_dir=HF_CACHE, use_fast=False)
+        model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE, torch_dtyp=torch.float32, device_map="auto", use_safetensors=True)
         model.to("cpu")
     
     except Exception as e:
