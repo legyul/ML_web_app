@@ -73,9 +73,9 @@ def train_lora_from_user_data(s3_dataset_key: str):
         logger.info(f"Epoch {epoch+1} - Loss: {total_loss:.4f}")
 
     # ✅ Step 5: Save
-    os.makedirs(SAVE_PATH, exist_ok=True)
-    model.save_pretrained(SAVE_PATH)
-    tokenizer.save_pretrained("/tmp/lora_tokenizer")
+    #os.makedirs(SAVE_PATH, exist_ok=True)
+    model.save_pretrained("/tmp/lora_finetuned_model")
+    tokenizer.save_pretrained("/tmp/lora_finetuned_tokenizer")
 
     # ✅ Step 6: Add model_type to config.json
     config_path = "/tmp/lora_finetuned_model/config.json"
