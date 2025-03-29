@@ -14,6 +14,7 @@ import pandas as pd
 from fpdf import FPDF
 import pickle
 import torch
+from rag_index import create_vectorstore_from_s3
 from rag_qa import run_qa
 from utils.download_utils import load_model_from_s3, download_llm_model_from_s3
 from lora_train import train_lora_from_user_data
@@ -228,6 +229,11 @@ def start_classification(filename):
             logger.debug("[DEBUG] calling run_classification")
             pdf_file, model_buffer = run_classification(s3_file_path, model_choice=model_choice)
             logger.debug("[DEBUG] Classification completed")
+
+            # Generate vector DB
+            logger.debug(f"Creating vector DB for: {s3_file_path}")
+            create_vectorstore_from_s3(s3_file_path)
+
             logger.debug("[DEBUG] Calling train_lora_from_user_data")
             threading.Thread(target=train_lora_from_user_data, args=(filename,)).start()
         
@@ -472,7 +478,7 @@ def ask_question():
         LORA_MODEL_S3_KEY = "models/lora_finetuned"
         HF_CACHE = "/tmp/hf_cache"
 
-        REQUIRED_FILES = {
+        REQUIRED_FILES = [
             "config.json",
             "tokenizer_config.json",
             "tokenizer.json",
@@ -480,7 +486,7 @@ def ask_question():
             "special_tokens_map.json",
             "generation_config.json",
             "model.safetensors"
-        }
+        ]
 
         if not os.path.exists(LOCAL_LORA_PATH):
             print("Downloading fine-tuned LoRA model from S3...")
@@ -494,7 +500,7 @@ def ask_question():
 
         # Load tokenizer and model
         tokenizer = AutoTokenizer.from_pretrained(LOCAL_LORA_PATH, cache_dir=HF_CACHE)
-        model = AutoModelForCausalLM.from_pretrained(LOCAL_LORA_PATH, cache_dir=HF_CACHE)
+        model = AutoModelForCausalLM.from_pretrained(LOCAL_LORA_PATH, cache_dir=HF_CACHE, use_fast=False)
         model.to("cpu")
     
     except Exception as e:

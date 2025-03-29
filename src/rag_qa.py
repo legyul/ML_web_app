@@ -7,27 +7,6 @@ from langchain.chains import retrieval_qa
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 from utils.download_utils import download_llm_model_from_s3
 
-# Set the vector DB path
-CHROMA_PATH = os.path.abspath(os.getenv("CHROMA_PATH", "./chroma_db"))
-# Embedding model path
-EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-# LLM model path
-LLM_MODEL_PATH = "/tmp/tinyllama_model"
-HF_CACHE = "/tmp/hf_cache"
-
-S3_REGION = os.getenv("AWS_REGION")
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
-S3_MODEL_PATH = "models/tinyllama_model/"
-
-REQUIRED_FILES = [
-    "config.json",
-    "tokenizer_config.json",
-    "tokenizer.json",
-    "tokenizer.model",
-    "special_tokens_map.json",
-    "generation_config.json",
-    "model.safetensors"
-]
 
 # Lazy-load cache
 _qa_pipeline = None
@@ -39,6 +18,28 @@ def get_qa_pipeline():
     global _qa_pipeline
     if _qa_pipeline is not None:
         return _qa_pipeline
+    
+    # Set the vector DB path
+    CHROMA_PATH = os.path.abspath(os.getenv("CHROMA_PATH", "./chroma_db"))
+    # Embedding model path
+    EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+    # LLM model path
+    LLM_MODEL_PATH = "/tmp/tinyllama_model"
+    HF_CACHE = "/tmp/hf_cache"
+
+    S3_REGION = os.getenv("AWS_REGION")
+    S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+    S3_MODEL_PATH = "models/tinyllama_model/"
+
+    REQUIRED_FILES = [
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "tokenizer.model",
+        "special_tokens_map.json",
+        "generation_config.json",
+        "model.safetensors"
+    ]
     
     print(f"[DEBUG] Downloading + Loading RAG pipeline...")
     download_llm_model_from_s3(
@@ -52,7 +53,7 @@ def get_qa_pipeline():
     embedding_function = HuggingFaceEmbeddings(model_name=EMBED_MODEL_NAME)
     vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
-    tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_PATH, cache_dir=HF_CACHE)
+    tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_PATH, cache_dir=HF_CACHE, use_fast=False)
     model = AutoModelForCausalLM.from_pretrained(LLM_MODEL_PATH, cache_dir=HF_CACHE)
 
     llm_pipeline = pipeline(
