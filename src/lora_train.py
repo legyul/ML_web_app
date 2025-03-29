@@ -10,7 +10,7 @@ from models.common import load_file
 
 device = torch.device("cpu")
 HF_CACHE = "/tmp/hf_cache"
-LOCAL_MODEL_DIR = "/tmp/tinyllama_model"
+LOCAL_MODEL_DIR = "/tmp/lora_finetuned_model"
 
 class PromptDataset(Dataset):
     def __init__(self, prompts, tokenizer):
@@ -40,7 +40,7 @@ def get_finedtuned_model_path(upload_filename: str, selected_model: str) -> str:
     filename_no_ext = os.path.splitext(os.path.basename(upload_filename))[0]
     model_folder_name = f"{filename_no_ext}_{selected_model.lower()}"
 
-    return os.path.join("/tmp/lora_finetuned", model_folder_name)
+    return os.path.join("/tmp/lora_finetuned_model", model_folder_name)
 
 def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model: str):
     logger.debug("[DEBUG] Entered train_lora_from_user_data()")
@@ -51,7 +51,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         
         filename_no_ext = os.path.splitext(os.path.basename(filename))[0]
         model_folder_name = f"{filename_no_ext}_{selected_model.lower()}"
-        s3_model_path = f"models/lora_finetuned/{model_folder_name}"
+        s3_model_path = f"models/lora_finetuned_model/{model_folder_name}"
 
         # ✅ Step 1: Load tokenizer and base model from pre-downloaded path
         tokenizer = AutoTokenizer.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
@@ -100,17 +100,16 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             with open(config_path, "r") as f:
                 config_data = json.load(f)
             
-            if "model_type" not in config_data:
-                config_data["model_type"] = "llama"
-                config_data["architectures"] = ["LlamaForCausalLM"]
+            config_data["model_type"] = "llama"
+            config_data["architectures"] = ["LlamaForCausalLM"]
 
-                with open(config_path, "w") as f:
-                    json.dump(config_data, f, indent=2)
+            with open(config_path, "w") as f:
+                json.dump(config_data, f, indent=2)
             
-            print("Done edit config.json")
+            logger.debug("Done edit config.json")
         
         else:
-            print("config.json not found")
+            logger.debug("config.json not found")
 
         # ✅ Step 7: Upload to S3
         s3 = boto3.client('s3', region_name=os.getenv("AWS_REGION"), config=boto3.session.Config(signature_version='s3v4'))
@@ -119,4 +118,5 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             s3_key = f"{s3_model_path}/{file}"
             s3.upload_file(local_path, os.getenv("S3_BUCKET_NAME"), s3_key)
     except Exception as e:
+        logger.error(f"[ERROR] train_lora_from_user_data() Exception: {str(e)}")
         print(f"[ERROR] train_lora_from_user_data() Exception: {str(e)}")
