@@ -6,6 +6,7 @@ from langchain_community.llms import huggingface_pipeline
 from langchain.chains import retrieval_qa
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 from utils.download_utils import download_llm_model_from_s3
+import torch
 
 
 # Lazy-load cache
@@ -54,7 +55,7 @@ def get_qa_pipeline():
     vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
     tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_PATH, cache_dir=HF_CACHE, use_fast=False)
-    model = AutoModelForCausalLM.from_pretrained(LLM_MODEL_PATH, cache_dir=HF_CACHE)
+    model = AutoModelForCausalLM.from_pretrained(LLM_MODEL_PATH, cache_dir=HF_CACHE, torch_dtype=torch.float32, device_map="auto", trust_remote_code=True, use_safetensors=True).to("cpu")
 
     llm_pipeline = pipeline(
         "text-generation",

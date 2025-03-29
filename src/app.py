@@ -500,7 +500,7 @@ def ask_question():
 
         # Load tokenizer and model
         tokenizer = AutoTokenizer.from_pretrained(LOCAL_LORA_PATH, cache_dir=HF_CACHE)
-        model = AutoModelForCausalLM.from_pretrained(LOCAL_LORA_PATH, cache_dir=HF_CACHE, use_fast=False)
+        model = AutoModelForCausalLM.from_pretrained(LOCAL_LORA_PATH, cache_dir=HF_CACHE, torch_dtyp=torch.float32, device_map="auto", use_safetensors=True)
         model.to("cpu")
     
     except Exception as e:

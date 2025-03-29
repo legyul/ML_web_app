@@ -78,7 +78,7 @@ def train_lora_from_user_data(s3_dataset_key: str):
 
     logger.debug("[DEBUG] Step 3: Loading tokenizer and base model")
     tokenizer = AutoTokenizer.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, use_fast=False)
-    base_model = AutoModelForCausalLM.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, torch_dtype=torch.float32).to(device)
+    base_model = AutoModelForCausalLM.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, torch_dtype=torch.float32, device_map="auto", trust_remode_code=True, use_safetensors=True).to(device)
 
     logger.debug("[DEBUG] Step 4: Preparing LoRA config")
     # Apply LoRA setting
