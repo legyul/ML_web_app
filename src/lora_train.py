@@ -54,13 +54,14 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         s3_model_path = f"models/lora_finetuned/{model_folder_name}"
 
         # ✅ Step 1: Load tokenizer and base model from pre-downloaded path
-        tokenizer = AutoTokenizer.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, use_fast=False)
+        tokenizer = AutoTokenizer.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
         base_model = AutoModelForCausalLM.from_pretrained(
             LOCAL_MODEL_DIR,
             cache_dir=HF_CACHE,
             torch_dtype=torch.float32,
             device_map="auto",
-            trust_remote_code=True
+            trust_remote_code=True,
+            local_files_only=True
         ).to(device)
 
         # ✅ Step 2: Apply LoRA
@@ -94,16 +95,17 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         tokenizer.save_pretrained(TOKENIZER_SAVE_PATH)
 
         # ✅ Step 6: Add model_type to config.json
-        config_path = "/tmp/lora_finetuned_model/config.json"
+        config_path = os.path.join(SAVE_PATH, "config.json")
         if os.path.exists(config_path):
             with open(config_path, "r") as f:
                 config_data = json.load(f)
             
-            config_data["model_type"] = "llama"
-            config_data["architectures"] = ["LlamaForCausalLM"]
+            if "model_type" not in config_data:
+                config_data["model_type"] = "llama"
+                config_data["architectures"] = ["LlamaForCausalLM"]
 
-            with open(config_path, "w") as f:
-                json.dump(config_data, f, indent=2)
+                with open(config_path, "w") as f:
+                    json.dump(config_data, f, indent=2)
             
             print("Done edit config.json")
         
