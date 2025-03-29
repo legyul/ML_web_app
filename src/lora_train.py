@@ -76,7 +76,6 @@ def train_lora_from_user_data(s3_dataset_key: str):
     os.makedirs(SAVE_PATH, exist_ok=True)
     model.save_pretrained(SAVE_PATH)
     tokenizer.save_pretrained(SAVE_PATH)
-    model.base_model.save_pretrained(SAVE_PATH)
 
     # ✅ Step 6: Add model_type to config.json
     config_path = "/tmp/lora_finetuned_model/config.json"
