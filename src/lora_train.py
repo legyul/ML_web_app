@@ -79,14 +79,18 @@ def train_lora_from_user_data(s3_dataset_key: str):
     model.base_model.save_pretrained(SAVE_PATH)
 
     # ✅ Step 6: Add model_type to config.json
-    config_path = os.path.join(SAVE_PATH, "config.json")
+    config_path = "/tmp/lora_finetuned_model/config.json"
     if os.path.exists(config_path):
         with open(config_path, "r") as f:
             config_data = json.load(f)
         
         config_data["model_type"] = "llama"
+        config_data["architectures"] = ["LlamaForCausalLM"]
+
         with open(config_path, "w") as f:
             json.dump(config_data, f, indent=2)
+        
+        print("Done edit config.json")
     
     else:
         print("config.json not found")
