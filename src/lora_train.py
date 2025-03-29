@@ -83,10 +83,13 @@ def train_lora_from_user_data(s3_dataset_key: str):
     if os.path.exists(config_path):
         with open(config_path, "r") as f:
             config_data = json.load(f)
-        if "model_type" not in config_data:
-            config_data["model_type"] = "llama"
-            with open(config_path, "w") as f:
-                json.dump(config_data, f, indent=2)
+        
+        config_data["model_type"] = "llama"
+        with open(config_path, "w") as f:
+            json.dump(config_data, f, indent=2)
+    
+    else:
+        print("config.json not found")
 
     # ✅ Step 7: Upload to S3
     s3 = boto3.client('s3', region_name=os.getenv("AWS_REGION"))
