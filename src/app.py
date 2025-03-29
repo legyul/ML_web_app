@@ -16,12 +16,14 @@ import pickle
 import torch
 from rag_index import create_vectorstore_from_s3
 from rag_qa import run_qa
-from utils.download_utils import load_model_from_s3, download_llm_model_from_s3
+from utils.download_utils import load_model_from_s3, download_llm_model_from_s3, download_model_from_huggingface
 from lora_train import train_lora_from_user_data
 import threading
 
 # Load environment variables from .env file
 load_dotenv()
+
+download_model_from_huggingface()
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

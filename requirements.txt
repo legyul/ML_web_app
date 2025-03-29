@@ -29,3 +29,4 @@ langchain-community
 trl
 einops
 sentencepiece
+huggingface_hub

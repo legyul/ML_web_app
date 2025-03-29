@@ -6,6 +6,7 @@ from botocore.exceptions import NoCredentialsError
 import zipfile
 import pickle
 from utils.logger_utils import logger
+from huggingface_hub import snapshot_download
 
 def download_llm_model_from_s3(S3_REGION, S3_BUCKET_NAME, s3_model_path, local_dir, required_files):
     """
@@ -106,3 +107,20 @@ def load_model_from_s3(s3_key, model_filename="model.pkl"):
     except Exception as e:
         print(f"Fail to load model: {e}")
         return None
+
+
+def download_model_from_huggingface():
+    HF_MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    HF_LOCAL_DIR = "/tmp/tinyllama_model"
+    
+    if not os.path.exists(HF_LOCAL_DIR) or not os.listdir(HF_LOCAL_DIR):
+        print("[DEBUG] Downloading model from Hugging Face...")
+        snapshot_download(
+            repo_id=HF_MODEL_ID,
+            local_dir=HF_LOCAL_DIR,
+            local_dir_use_symlinks=False,
+            resume_download=True
+        )
+        print("[DEBUG] Model download complete.")
+    else:
+        print("[DEBUG] Model already exists. Skipping download.")
