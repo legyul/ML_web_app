@@ -242,8 +242,7 @@ def start_classification(filename):
 
             logger.debug("[DEBUG] Calling train_lora_from_user_data")
             print("[DEBUG] Calling train_lora_from_user_data")
-            #threading.Thread(target=train_lora_from_user_data(filename, model_choice), args=(filename,)).start()
-            train_lora_from_user_data(filename, model_choice)
+            threading.Thread(target=train_lora_from_user_data(filename, model_choice), args=(filename, model_choice)).start()
             print("[DEBUG] Done run_classification")
         
         except Exception as e:
