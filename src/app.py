@@ -229,18 +229,25 @@ def start_classification(filename):
 
     try:
         try:
+            print("[DEBUG] calling run_classification")
             logger.debug("[DEBUG] calling run_classification")
             pdf_file, model_buffer = run_classification(s3_file_path, model_choice=model_choice)
             logger.debug("[DEBUG] Classification completed")
+            print("[DEBUG] Classification completed")
 
             # Generate vector DB
+            print(f"Creating vector DB for: {s3_file_path}")
             logger.debug(f"Creating vector DB for: {s3_file_path}")
             create_vectorstore_from_s3(s3_file_path)
 
             logger.debug("[DEBUG] Calling train_lora_from_user_data")
-            threading.Thread(target=train_lora_from_user_data(filename, model_choice), args=(filename,)).start()
+            print("[DEBUG] Calling train_lora_from_user_data")
+            #threading.Thread(target=train_lora_from_user_data(filename, model_choice), args=(filename,)).start()
+            train_lora_from_user_data(filename, model_choice)
+            print("[DEBUG] Done run_classification")
         
         except Exception as e:
+            print(f"[ERROR] Exception in run_classification: {str(e)}")
             logger.error(f"[ERROR] Exception in run_classification: {str(e)}")
             return jsonify({"error": "Error during classification processing."}), 500
 
