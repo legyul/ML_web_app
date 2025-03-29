@@ -28,6 +28,4 @@ langchain-community
 # LoRA & LLM
 trl
 einops
-
-# GPT-3.5-Turbo API
-openai
+sentencepiece
