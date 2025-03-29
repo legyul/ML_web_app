@@ -242,6 +242,7 @@ def start_classification(filename):
 
             logger.debug("[DEBUG] Calling train_lora_from_user_data")
             print("[DEBUG] Calling train_lora_from_user_data")
+            logger.debug(f"Selected model: {model_choice}")
             threading.Thread(target=train_lora_from_user_data, args=(filename, model_choice)).start()
             print("[DEBUG] Done run_classification")
         
