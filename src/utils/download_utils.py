@@ -113,14 +113,26 @@ def download_model_from_huggingface():
     HF_MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
     HF_LOCAL_DIR = "/tmp/tinyllama_model"
 
-    if not os.path.exists(HF_LOCAL_DIR) or not os.listdir(HF_LOCAL_DIR):
-        print("[DEBUG] Downloading model from Hugging Face...")
-        snapshot_download(
-            repo_id=HF_MODEL_ID,
-            local_dir=HF_LOCAL_DIR,
-            local_dir_use_symlinks=False,
-            resume_download=False
-        )
-        print("[DEBUG] Model download complete.")
-    else:
-        print("[DEBUG] Model already exists. Skipping download.")
+    REQUIRED_FILES = [
+            "config.json",
+            "tokenizer_config.json",
+            "tokenizer.json",
+            "tokenizer.model",
+            "special_tokens_map.json",
+            "generation_config.json",
+            "model.safetensors"
+        ]
+    
+    if all(os.path.exists(os.path.join(HF_LOCAL_DIR, f)) for f in REQUIRED_FILES):
+        print("[DEBUG] Model already fully exists. Skipping download.")
+        return
+
+    print("[DEBUG] Downloading model from Hugging Face...")
+    snapshot_download(
+        repo_id=HF_MODEL_ID,
+        local_dir=HF_LOCAL_DIR,
+        local_dir_use_symlinks=False,
+        resume_download=True
+    )
+    print("[DEBUG] Model download complete.")
+    
