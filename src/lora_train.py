@@ -81,7 +81,8 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
                 cache_dir=HF_CACHE,
                 torch_dtype=torch_dtype,
                 trust_remote_code=True,
-                local_files_only=True
+                local_files_only=True,
+                low_cpu_mem_usage=True
             ).to("cpu")
             logger.debug("✅ Base model loaded successfully")
         except Exception as e:
