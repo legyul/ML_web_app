@@ -243,7 +243,7 @@ def start_classification(filename):
 
             logger.debug("[DEBUG] Calling train_lora_from_user_data")
             print("[DEBUG] Calling train_lora_from_user_data")
-            threading.Thread(target=train_lora_from_user_data, args=(s3_file_path, filename, model_choice)).start()
+            train_lora_from_user_data(s3_file_path, filename, model_choice)
             print("[DEBUG] Done run_classification")
         
         except Exception as e:
