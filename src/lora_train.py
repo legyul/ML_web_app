@@ -48,7 +48,8 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         SAVE_PATH = get_finedtuned_model_path(filename, selected_model)
         HF_CACHE = "/tmp/hf_cache"
         BASE_MODEL_DIR = "/tmp/tinyllama_model"
-        logger.info(SAVE_PATH)
+        logger.debug(f"[DEBUG] BASE_MODEL_DIR = {BASE_MODEL_DIR}")
+        logger.debug(f"[DEBUG] BASE_MODEL_DIR contents = {os.listdir(BASE_MODEL_DIR)}")
         
         filename_no_ext = os.path.splitext(os.path.basename(filename))[0]
         model_folder_name = f"{filename_no_ext}_{selected_model.lower()}"
@@ -56,15 +57,27 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         logger.info(model_folder_name)
 
         # ✅ Step 1: Load tokenizer and base model from pre-downloaded path
-        tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_DIR, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
-        base_model = AutoModelForCausalLM.from_pretrained(
-            BASE_MODEL_DIR,
-            cache_dir=HF_CACHE,
-            torch_dtype=torch.float32,
-            device_map="auto",
-            trust_remote_code=True,
-            local_files_only=True
-        ).to(device)
+        try:
+            logger.debug("[DEBUG] Trying to load tokenizer...")
+            tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_DIR, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
+            logger.debug("✅ Tokenizer loaded successfully")
+        except Exception as e:
+            logger.error(f"[ERROR] Failed to load tokenizer: {e}")
+            return
+        try:
+            logger.debug("[DEBUG] Trying to load base model...")
+            base_model = AutoModelForCausalLM.from_pretrained(
+                BASE_MODEL_DIR,
+                cache_dir=HF_CACHE,
+                torch_dtype=torch.float32,
+                device_map="auto",
+                trust_remote_code=True,
+                local_files_only=True
+            ).to(device)
+            logger.debug("✅ Base model loaded successfully")
+        except Exception as e:
+            logger.error(f"[ERROR] Failed to load base model: {e}")
+            return
         logger.debug("Loaded tokenizer successfully")
 
         # ✅ Step 2: Apply LoRA
