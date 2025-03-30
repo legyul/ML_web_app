@@ -458,13 +458,14 @@ def ask_question():
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     data = request.json
+    logger.info(f"ask_question: {data}")
     task = data.get("task", "unknown")      # Clustering or Classification
     filename = data.get("filename", "unknown")
     model_choice = data.get("model_choice")
+    logger.info(f"Selected model: {model_choice}")
     question = data.get("question", "")
     input_data = data.get("input_data", None)       # New data entered by the user
     model_path = get_finedtuned_model_path(filename, model_choice)
-    logger.info(f"Selected model: {model_choice}")
 
     context = ""
 
