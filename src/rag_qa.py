@@ -6,13 +6,14 @@ from langchain_community.llms import huggingface_pipeline
 from langchain.chains import retrieval_qa
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 import torch
+from lora_train import get_finedtuned_model_path
 
 load_dotenv()
 
 # Lazy-load cache
 _qa_pipeline = None
 
-def get_qa_pipeline():
+def get_qa_pipeline(filename: str, model_choice: str):
     """
     Initialize a system that finds similar documents when asked and causes LLM to generate answers
     """
@@ -23,14 +24,14 @@ def get_qa_pipeline():
     try:
         print("[DEBUG] Loading RAG pipeline (no model download)")
 
-        LLM_MODEL_PATH = "/tmp/lora_finetuned_model"
+        model_path = get_finedtuned_model_path(filename, model_choice)
         HF_CACHE = "/tmp/hf_cache"
 
         print("[DEBUG] Loading tokenizer...")
-        tokenizer = AutoTokenizer.from_pretrained(LLM_MODEL_PATH, cache_dir=HF_CACHE, use_fast=False)
+        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
 
         print("[DEBUG] Loading model...")
-        model = AutoModelForCausalLM.from_pretrained(LLM_MODEL_PATH, cache_dir=HF_CACHE).to("cpu")
+        model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE).to("cpu")
 
         # Pipeline settings
         llm_pipeline = pipeline(
@@ -66,10 +67,10 @@ def get_qa_pipeline():
         print(f"❌ Failed to load LoRA model: {e}")
         return None
 
-def run_qa(query: str) -> str:
+def run_qa(query: str, filename: str, model_choice: str) -> str:
     """
     Create a RAG QA response to a user's question
     """
-    qa = get_qa_pipeline()
+    qa = get_qa_pipeline(filename, model_choice)
     response = qa.run(query)
     return response

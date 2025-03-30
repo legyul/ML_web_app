@@ -454,13 +454,14 @@ def ask_question():
     model_choice = data.get("model_choice", "unknown")
     question = data.get("question", "")
     input_data = data.get("input_data", None)       # New data entered by the user
+    model_path = get_finedtuned_model_path(filename, model_choice)
 
     context = ""
 
     # Dynamically load QA pipeline when needed
     try:
         # Reset RAG QA Pipeline
-        rag_response = run_qa(question)
+        rag_response = run_qa(question, filename, model_choice)
         context = f"RAG response: {rag_response}"
     except Exception as e:
         rag_response = f"Error during RAG processing: {str(e)}"
@@ -484,7 +485,6 @@ def ask_question():
     
     # Auto-load LoRA model (first try fine-tuned model)
     try:
-        LOCAL_LORA_PATH = "/tmp/lora_finetuned_model"
         LORA_MODEL_S3_KEY = "models/lora_finetuned"
         HF_CACHE = "/tmp/hf_cache"
 
@@ -498,22 +498,21 @@ def ask_question():
             "model.safetensors"
         ]
 
-        if not os.path.exists(LOCAL_LORA_PATH):
+        if not os.path.exists(model_path):
             print("Downloading fine-tuned LoRA model from S3...")
             download_llm_model_from_s3(
                 S3_REGION,
                 S3_BUCKET_NAME,
                 LORA_MODEL_S3_KEY,
-                LOCAL_LORA_PATH,
+                model_path,
                 REQUIRED_FILES
             )
         
         model_path = get_finedtuned_model_path(filename, model_choice)
-        tokenizer_path = model_path + "_tokenizer"
 
         # Load tokenizer and model
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, cache_dir=HF_CACHE, use_fast=False)
-        model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE, torch_dtyp=torch.float32, device_map="auto", use_safetensors=True)
+        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
+        model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE, torch_dtype=torch.float32, device_map="auto", use_safetensors=True)
         model.to("cpu")
     
     except Exception as e:

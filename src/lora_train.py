@@ -47,7 +47,6 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
     try:
         SAVE_PATH = get_finedtuned_model_path(filename, selected_model)
-        TOKENIZER_SAVE_PATH = SAVE_PATH + "_tokenizer"
         
         filename_no_ext = os.path.splitext(os.path.basename(filename))[0]
         model_folder_name = f"{filename_no_ext}_{selected_model.lower()}"
@@ -92,7 +91,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         # ✅ Step 5: Save
         #os.makedirs(SAVE_PATH, exist_ok=True)
         model.save_pretrained(SAVE_PATH)
-        tokenizer.save_pretrained(TOKENIZER_SAVE_PATH)
+        tokenizer.save_pretrained(SAVE_PATH)
 
         # ✅ Step 6: Add model_type to config.json
         config_path = os.path.join(SAVE_PATH, "config.json")
