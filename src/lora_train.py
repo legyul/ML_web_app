@@ -75,13 +75,14 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             return
         try:
             logger.debug("[DEBUG] Trying to load base model...")
+            torch_dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else torch.float32
             base_model = AutoModelForCausalLM.from_pretrained(
                 BASE_MODEL_DIR,
                 cache_dir=HF_CACHE,
-                device_map="auto",
+                torch_dtype=torch_dtype,
                 trust_remote_code=True,
                 local_files_only=True
-            ).to(device)
+            ).to("cpu")
             logger.debug("✅ Base model loaded successfully")
         except Exception as e:
             logger.error(f"[ERROR] Failed to load base model: {e}")
