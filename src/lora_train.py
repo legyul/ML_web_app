@@ -62,6 +62,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             trust_remote_code=True,
             local_files_only=True
         ).to(device)
+        logger.debug("Loaded tokenizer successfully")
 
         # ✅ Step 2: Apply LoRA
         lora_config = LoraConfig(r=8, lora_alpha=32, lora_dropout=0.1, bias="none", task_type="CAUSAL_LM")
@@ -89,7 +90,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             logger.info(f"Epoch {epoch+1} - Loss: {total_loss:.4f}")
 
         # ✅ Step 5: Save
-        #os.makedirs(SAVE_PATH, exist_ok=True)
+        os.makedirs(SAVE_PATH, exist_ok=True)
         model.save_pretrained(SAVE_PATH)
         tokenizer.save_pretrained(SAVE_PATH)
 
