@@ -19,6 +19,7 @@ from rag_qa import run_qa
 from utils.download_utils import load_model_from_s3, download_llm_model_from_s3, download_model_from_huggingface
 from lora_train import train_lora_from_user_data, get_finedtuned_model_path
 import threading
+import json
 
 # Load environment variables from .env file
 load_dotenv()
@@ -507,6 +508,15 @@ def ask_question():
                 model_path,
                 REQUIRED_FILES
             )
+
+            config_path = os.path.join(model_path, "config.json")
+            with open(config_path, "r") as f:
+                config_data = json.load(f)
+
+            config_data["torch_dtype"] = "float32"
+
+            with open(config_path, "w") as f:
+                json.dump(config_data, f, indent=2)
         
         model_path = get_finedtuned_model_path(filename, model_choice)
 
