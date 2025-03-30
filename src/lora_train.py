@@ -32,13 +32,17 @@ def get_prompts_from_s3_dataset(s3_key: str) -> list[str]:
         prompts.append(text)
     return prompts
 
+def sanitize_model_name(name: str) -> str:
+    return name.strip().lower().replace(" ", "_")
+
 def get_finedtuned_model_path(upload_filename: str, selected_model: str) -> str:
     """
     Create a unique path with the file name uploaded by the user and the classification model name selected
     """
     logger.info(f"get_finedtuned_model: {selected_model}")
+    safe_model = sanitize_model_name(selected_model)
     filename_no_ext = os.path.splitext(os.path.basename(upload_filename))[0]
-    model_folder_name = f"{filename_no_ext}_{selected_model.lower()}"
+    model_folder_name = f"{filename_no_ext}_{safe_model}"
 
     path = os.path.join("/tmp/lora_finetuned_model", model_folder_name)
     logger.info(f"finetuned model path: {path}")
@@ -55,8 +59,9 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         logger.debug(f"[DEBUG] BASE_MODEL_DIR = {BASE_MODEL_DIR}")
         logger.debug(f"[DEBUG] BASE_MODEL_DIR contents = {os.listdir(BASE_MODEL_DIR)}")
         
+        safe_model = sanitize_model_name(selected_model)
         filename_no_ext = os.path.splitext(os.path.basename(filename))[0]
-        model_folder_name = f"{filename_no_ext}_{selected_model.lower()}"
+        model_folder_name = f"{filename_no_ext}_{safe_model}"
         s3_model_path = f"models/lora_finetuned_model/{model_folder_name}"
         logger.info(f"train_lora_from: {selected_model}")
 
