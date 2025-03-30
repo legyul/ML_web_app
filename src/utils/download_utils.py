@@ -110,8 +110,8 @@ def load_model_from_s3(s3_key, model_filename="model.pkl"):
 
 
 def download_model_from_huggingface():
-    HF_MODEL_ID = "distilgpt2"
-    HF_LOCAL_DIR = "/tmp/distilgpt2_model"
+    HF_MODEL_ID = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    HF_LOCAL_DIR = "/tmp/tinyllama_model"
 
     REQUIRED_FILES = [
             "config.json",

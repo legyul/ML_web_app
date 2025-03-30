@@ -47,7 +47,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
     try:
         SAVE_PATH = get_finedtuned_model_path(filename, selected_model)
         HF_CACHE = "/tmp/hf_cache"
-        BASE_MODEL_DIR = "/tmp/distilgpt2_model"
+        BASE_MODEL_DIR = "/tmp/tinyllama_model"
         logger.debug(f"[DEBUG] BASE_MODEL_DIR = {BASE_MODEL_DIR}")
         logger.debug(f"[DEBUG] BASE_MODEL_DIR contents = {os.listdir(BASE_MODEL_DIR)}")
         
@@ -132,8 +132,8 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             with open(config_path, "r") as f:
                 config_data = json.load(f)
             
-            config_data["model_type"] = "gpt2"
-            config_data["architectures"] = ["GPT2LMHeadModel"]
+            config_data["model_type"] = "llama"
+            config_data["architectures"] = ["LlamaForCausalLM"]
 
             with open(config_path, "w") as f:
                 json.dump(config_data, f, indent=2)

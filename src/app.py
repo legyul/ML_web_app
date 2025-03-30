@@ -199,12 +199,13 @@ def process_classification(filename):
     if request.method == 'POST':
         model_choice = request.form.get('model')
         logger.debug(f"app model_choice: {model_choice}")
+        print(f"app model_choice: {model_choice}")
         s3_file_path = f"uploaded/{filename}"
 
         logger.debug("[DEBUG] Calling train_lora_from_user_data")
         print("[DEBUG] Calling train_lora_from_user_data")
         threading.Thread(target=run_train_thread, args=(s3_file_path, filename, model_choice)).start()
-        print("[DEBUG] Done run_classification")
+        
 
         if not model_choice:
             flash("Please select a model.")
