@@ -456,6 +456,7 @@ def ask_question():
     question = data.get("question", "")
     input_data = data.get("input_data", None)       # New data entered by the user
     model_path = get_finedtuned_model_path(filename, model_choice)
+    logger.info(f"Selected model: {model_choice}")
 
     context = ""
 
