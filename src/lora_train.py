@@ -9,8 +9,7 @@ from utils.logger_utils import logger
 from models.common import load_file
 
 device = torch.device("cpu")
-HF_CACHE = "/tmp/hf_cache"
-LOCAL_MODEL_DIR = "/tmp/lora_finetuned_model"
+
 
 class PromptDataset(Dataset):
     def __init__(self, prompts, tokenizer):
@@ -47,15 +46,17 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
     try:
         SAVE_PATH = get_finedtuned_model_path(filename, selected_model)
+        HF_CACHE = "/tmp/hf_cache"
+        BASE_MODEL_DIR = "/tmp/tinyllama_model"
         
         filename_no_ext = os.path.splitext(os.path.basename(filename))[0]
         model_folder_name = f"{filename_no_ext}_{selected_model.lower()}"
         s3_model_path = f"models/lora_finetuned_model/{model_folder_name}"
 
         # ✅ Step 1: Load tokenizer and base model from pre-downloaded path
-        tokenizer = AutoTokenizer.from_pretrained(LOCAL_MODEL_DIR, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
+        tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_DIR, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
         base_model = AutoModelForCausalLM.from_pretrained(
-            LOCAL_MODEL_DIR,
+            BASE_MODEL_DIR,
             cache_dir=HF_CACHE,
             torch_dtype=torch.float32,
             device_map="auto",
