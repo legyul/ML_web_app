@@ -48,10 +48,12 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         SAVE_PATH = get_finedtuned_model_path(filename, selected_model)
         HF_CACHE = "/tmp/hf_cache"
         BASE_MODEL_DIR = "/tmp/tinyllama_model"
+        logger.info(SAVE_PATH)
         
         filename_no_ext = os.path.splitext(os.path.basename(filename))[0]
         model_folder_name = f"{filename_no_ext}_{selected_model.lower()}"
         s3_model_path = f"models/lora_finetuned_model/{model_folder_name}"
+        logger.info(model_folder_name)
 
         # ✅ Step 1: Load tokenizer and base model from pre-downloaded path
         tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_DIR, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
