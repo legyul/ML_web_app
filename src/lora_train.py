@@ -36,12 +36,12 @@ def get_finedtuned_model_path(upload_filename: str, selected_model: str) -> str:
     """
     Create a unique path with the file name uploaded by the user and the classification model name selected
     """
-    logger.debug(f"get_finedtuned_model: {selected_model}")
+    logger.info(f"get_finedtuned_model: {selected_model}")
     filename_no_ext = os.path.splitext(os.path.basename(upload_filename))[0]
     model_folder_name = f"{filename_no_ext}_{selected_model.lower()}"
 
     path = os.path.join("/tmp/lora_finetuned_model", model_folder_name)
-    logger.debug(f"finetuned model path: {path}")
+    logger.info(f"finetuned model path: {path}")
 
     return path
 
