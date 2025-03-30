@@ -202,14 +202,13 @@ def process_classification(filename):
         print(f"app model_choice: {model_choice}")
         s3_file_path = f"uploaded/{filename}"
 
-        logger.debug("[DEBUG] Calling train_lora_from_user_data")
-        print("[DEBUG] Calling train_lora_from_user_data")
-        threading.Thread(target=run_train_thread, args=(s3_file_path, filename, model_choice)).start()
-        
-
         if not model_choice:
             flash("Please select a model.")
             return redirect(request.url)
+        
+        logger.debug("[DEBUG] Calling train_lora_from_user_data")
+        print("[DEBUG] Calling train_lora_from_user_data")
+        threading.Thread(target=run_train_thread, args=(s3_file_path, filename, model_choice)).start()
         
         # After choose the model, move to loading page
         return render_template('loading.html', filename=filename, model_choice=model_choice)

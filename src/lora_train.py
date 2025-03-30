@@ -7,6 +7,7 @@ import json
 import boto3
 from utils.logger_utils import logger
 from models.common import load_file
+import shutil
 
 device = torch.device("cpu")
 
@@ -78,6 +79,11 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         try:
             logger.debug("[DEBUG] Trying to load tokenizer...")
             tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_DIR, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
+
+            # ✅ fix padding issue
+            if tokenizer.pad_token is None:
+                tokenizer.pad_token = tokenizer.eos_token
+
             logger.debug("✅ Tokenizer loaded successfully")
         except Exception as e:
             logger.error(f"[ERROR] Failed to load tokenizer: {e}")
@@ -108,6 +114,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             task_type="CAUSAL_LM"
             )
         model = get_peft_model(base_model, lora_config)
+        logger.info("Applied lora_config")
 
         # ✅ Step 3: Prepare Data
         prompts = get_prompts_from_s3_dataset(s3_dataset_key)
@@ -134,6 +141,12 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         os.makedirs(SAVE_PATH, exist_ok=True)
         model.save_pretrained(SAVE_PATH)
         tokenizer.save_pretrained(SAVE_PATH)
+
+        # ✅ After model.save_pretrained(SAVE_PATH)
+        # Copy base model config into SAVE_PATH
+        base_config_path = os.path.join(BASE_MODEL_DIR, "config.json")
+        target_config_path = os.path.join(SAVE_PATH, "config.json")
+        shutil.copyfile(base_config_path, target_config_path)
 
         # ✅ Step 6: Add model_type to config.json
         config_path = os.path.join(SAVE_PATH, "config.json")
