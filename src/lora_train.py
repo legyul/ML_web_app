@@ -142,10 +142,10 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             with open(config_path, "w") as f:
                 json.dump(config_data, f, indent=2)
             
-            logger.debug("Done edit config.json")
+            logger.info("Done edit config.json")
         
         else:
-            logger.debug("config.json not found")
+            logger.info("config.json not found")
 
         # ✅ Step 7: Upload to S3
         s3 = boto3.client('s3', region_name=os.getenv("AWS_REGION"), config=boto3.session.Config(signature_version='s3v4'))
