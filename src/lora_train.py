@@ -54,7 +54,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         filename_no_ext = os.path.splitext(os.path.basename(filename))[0]
         model_folder_name = f"{filename_no_ext}_{selected_model.lower()}"
         s3_model_path = f"models/lora_finetuned_model/{model_folder_name}"
-        logger.info(model_folder_name)
+        logger.info(f"train_lora_from: {selected_model}")
 
         config_path = os.path.join(BASE_MODEL_DIR, "config.json")
         with open(config_path, "r") as f:
