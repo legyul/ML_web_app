@@ -144,3 +144,12 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
     except Exception as e:
         logger.error(f"[ERROR] train_lora_from_user_data() Exception: {str(e)}")
         print(f"[ERROR] train_lora_from_user_data() Exception: {str(e)}")
+
+def run_train_thread(s3_path, filename, model_choice):
+    try:
+        logger.debug("Inside run_train_thread")
+        print("Inside run_train_thread")
+        train_lora_from_user_data(s3_path, filename, model_choice)
+    except Exception as e:
+        logger.error(f"Threaded training failed: {str(e)}")
+        print(f"Threaded training failed: {str(e)}")

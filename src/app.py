@@ -17,7 +17,7 @@ import torch
 from rag_index import create_vectorstore_from_s3
 from rag_qa import run_qa
 from utils.download_utils import load_model_from_s3, download_llm_model_from_s3, download_model_from_huggingface
-from lora_train import train_lora_from_user_data, get_finedtuned_model_path
+from lora_train import train_lora_from_user_data, get_finedtuned_model_path, run_train_thread
 import threading
 import json
 
@@ -243,7 +243,7 @@ def start_classification(filename):
 
             logger.debug("[DEBUG] Calling train_lora_from_user_data")
             print("[DEBUG] Calling train_lora_from_user_data")
-            train_lora_from_user_data(s3_file_path, filename, model_choice)
+            threading.Thread(target=run_train_thread, args=(s3_file_path, filename, model_choice)).start()
             print("[DEBUG] Done run_classification")
         
         except Exception as e:
