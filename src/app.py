@@ -220,6 +220,7 @@ def start_classification(filename):
     logger.debug(f"[DEBUG] received data: {data}")
 
     model_choice = data.get("model_choice")
+    logger.debug(f"app model_choice: {model_choice}")
 
     if not filename or not model_choice:
         return jsonify({"error": "Missing filename or model choice"}), 400
