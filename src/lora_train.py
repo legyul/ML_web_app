@@ -150,11 +150,16 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
         for epoch in range(num_epochs):
             total_loss = 0
+            logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
             for step, batch in enumerate(dataloader):
                 try:
                     logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
+                    logger.debug("🧠 Moving batch to device...")
                     batch = {k: v.to(device) for k, v in batch.items()}
+                    logger.debug("✅ Batch moved to device")
+                    logger.debug("📥 Forward pass start")
                     outputs = model(**batch)
+                    logger.debug("📤 Forward pass complete")
                     loss = outputs.loss
                     logger.debug(f"🧮 Epoch {epoch+1} | Step {step+1} | Loss: {loss.item()}")
                     
