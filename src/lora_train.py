@@ -154,11 +154,11 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             with open(config_path, "r") as f:
                 config_data = json.load(f)
             
-            config_data["model_type"] = "llama"
-            config_data["architectures"] = ["LlamaForCausalLM"]
+            config_data.append({"model_type": "llama"})
+            config_data.append({"architectures": "LlamaForCausalLM"})
 
-            with open(config_path, "w") as f:
-                json.dump(config_data, f, indent=2)
+            # with open(config_path, "w") as f:
+            #     json.dump(config_data, f, indent=2)
             
             logger.info("Done edit config.json")
         
