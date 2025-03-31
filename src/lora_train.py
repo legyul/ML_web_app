@@ -147,9 +147,10 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         base_config_path = os.path.join(BASE_MODEL_DIR, "config.json")
         target_config_path = os.path.join(SAVE_PATH, "config.json")
         shutil.copyfile(base_config_path, target_config_path)
-
+        
         # ✅ Step 6: Add model_type to config.json
         config_path = os.path.join(SAVE_PATH, "config.json")
+        logger.info("DEBUG - config.json exists =", os.path.exists(os.path.join(SAVE_PATH, "config.json")))
         if os.path.exists(config_path):
             with open(config_path, "r") as f:
                 config_data = json.load(f)
