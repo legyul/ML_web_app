@@ -115,6 +115,8 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             )
         model = get_peft_model(base_model, lora_config)
         logger.info("Applied lora_config")
+        logger.info(f"✅ LoRA Model object: {model}")
+        logger.info(f"✅ Using device: {device}")
 
         # ✅ Step 3: Prepare Data
         prompts = get_prompts_from_s3_dataset(s3_dataset_key)
@@ -128,13 +130,18 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         for epoch in range(3):
             total_loss = 0
             for batch in dataloader:
-                batch = {k: v.to(device) for k, v in batch.items()}
-                outputs = model(**batch)
-                loss = outputs.loss
-                loss.backward()
-                optimizer.step()
-                optimizer.zero_grad()
-                total_loss += loss.item()
+                logger.debug(f"🔁 batch keys: {list(batch.keys())}")
+                logger.debug(f"🔁 batch sample: {batch}")
+                try:
+                    batch = {k: v.to(device) for k, v in batch.items()}
+                    outputs = model(**batch)
+                    loss = outputs.loss
+                    loss.backward()
+                    optimizer.step()
+                    optimizer.zero_grad()
+                    total_loss += loss.item()
+                except Exception as e:
+                    logger.error(f"Error during training loop: {str(e)}")
             logger.info(f"Epoch {epoch+1} - Loss: {total_loss:.4f}")
 
         # ✅ Step 5: Save
