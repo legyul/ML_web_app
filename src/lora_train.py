@@ -129,19 +129,29 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             prompts = prompts[:10]  # 10개까지만 사용
 
         logger.info(f"✅ 최종 prompt 개수: {len(prompts)}")
-        
+
+        prompt_count = len(prompts)
+
+        if prompt_count < 50:
+            num_epochs = 5
+        elif prompt_count < 200:
+            num_epochs = 3
+        else:
+            num_epochs = 2
+
         dataset = PromptDataset(prompts, tokenizer)
         logger.debug(f"📦 Dataset length: {len(dataset)}")
-        dataloader = DataLoader(dataset, batch_size=2, shuffle=True)
+        dataloader = DataLoader(dataset, batch_size=2, shuffle=True, drop_last=False)
 
         # ✅ Step 4: Training
         model.train()
         optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 
-        for epoch in range(3):
+        for epoch in num_epochs:
             total_loss = 0
             for step, batch in enumerate(dataloader):
                 try:
+                    logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
                     batch = {k: v.to(device) for k, v in batch.items()}
                     outputs = model(**batch)
                     loss = outputs.loss
