@@ -198,6 +198,7 @@ def process_clustering(filename):
 def process_classification(filename):
     if request.method == 'POST':
         model_choice = request.form.get('model')
+        session['model_choice'] = model_choice
         logger.debug(f"app model_choice: {model_choice}")
         print(f"app model_choice: {model_choice}")
         s3_file_path = f"uploaded/{filename}"
@@ -460,8 +461,8 @@ def ask_question():
     data = request.json
     print(f"ask_question: {data}")
     task = data.get("task", "unknown")      # Clustering or Classification
-    filename = data.get("filename", "unknown")
-    model_choice = data.get("model_choice")
+    filename = session.get("filename")
+    model_choice = session.get("model_choice")
     print(f"Selected model: {model_choice}")
     question = data.get("question", "")
     input_data = data.get("input_data", None)       # New data entered by the user
