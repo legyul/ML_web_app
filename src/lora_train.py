@@ -169,6 +169,8 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
                 except Exception as e:
                     logger.error(f"❌ Error during training step: {e}")
             logger.info(f"Epoch {epoch+1} - Loss: {total_loss:.4f}")
+        
+        logger.info("✅ Finished all epochs. Proceeding to save model...")
 
         # ✅ Step 5: Save
         os.makedirs(SAVE_PATH, exist_ok=True)
