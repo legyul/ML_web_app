@@ -57,7 +57,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
     try:
         SAVE_PATH = get_finedtuned_model_path(filename, selected_model)
         HF_CACHE = "/tmp/hf_cache"
-        BASE_MODEL_DIR = "/tmp/tinyllama_model"
+        BASE_MODEL_DIR = "/tmp/distilgpt2"
         logger.debug(f"[DEBUG] BASE_MODEL_DIR = {BASE_MODEL_DIR}")
         logger.debug(f"[DEBUG] BASE_MODEL_DIR contents = {os.listdir(BASE_MODEL_DIR)}")
         
@@ -172,7 +172,9 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
                     start = time.time()
                     loss.backward()
                     logger.debug(f"✅ Backward 끝 (소요시간: {time.time() - start:.2f}초)")
+                    logger.debug("💾 Optimizer step 시작")
                     optimizer.step()
+                    logger.debug("💾 Optimizer step 끝")
                     optimizer.zero_grad()
                     total_loss += loss.item()
                 except Exception as e:
