@@ -8,6 +8,7 @@ import boto3
 from utils.logger_utils import logger
 from models.common import load_file
 import shutil
+import time
 
 device = torch.device("cpu")
 
@@ -167,7 +168,10 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
                         logger.error("❌ NaN loss detected! Stopping training.")
                         break
 
+                    logger.debug("🌀 Backward 시작")
+                    start = time.time()
                     loss.backward()
+                    logger.debug(f"✅ Backward 끝 (소요시간: {time.time() - start:.2f}초)")
                     optimizer.step()
                     optimizer.zero_grad()
                     total_loss += loss.item()
