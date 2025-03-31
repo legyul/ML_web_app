@@ -129,19 +129,23 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
         for epoch in range(3):
             total_loss = 0
-            for batch in dataloader:
-                logger.debug(f"🔁 batch keys: {list(batch.keys())}")
-                logger.debug(f"🔁 batch sample: {batch}")
+            for step, batch in enumerate(dataloader):
                 try:
                     batch = {k: v.to(device) for k, v in batch.items()}
                     outputs = model(**batch)
                     loss = outputs.loss
+                    logger.debug(f"🧮 Epoch {epoch+1} | Step {step+1} | Loss: {loss.item()}")
+                    
+                    if torch.isnan(loss):
+                        logger.error("❌ NaN loss detected! Stopping training.")
+                        break
+
                     loss.backward()
                     optimizer.step()
                     optimizer.zero_grad()
                     total_loss += loss.item()
                 except Exception as e:
-                    logger.error(f"Error during training loop: {str(e)}")
+                    logger.error(f"❌ Error during training step: {e}")
             logger.info(f"Epoch {epoch+1} - Loss: {total_loss:.4f}")
 
         # ✅ Step 5: Save
