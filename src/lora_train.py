@@ -143,7 +143,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
         dataset = PromptDataset(prompts, tokenizer)
         logger.debug(f"📦 Dataset length: {len(dataset)}")
-        dataloader = DataLoader(dataset, batch_size=2, shuffle=True, drop_last=False, num_workers=0)
+        dataloader = DataLoader(dataset, batch_size=1, shuffle=True, drop_last=False, num_workers=0)
 
         # ✅ Step 4: Training
         model.train()
