@@ -20,9 +20,13 @@ class PromptDataset(Dataset):
         self.encodings["labels"] = self.labels
     
     def __getitem__(self, idx):
+        if idx >= len(self.labels):
+            logger.error(f"❌ Invalid index access: {idx} >= {len(self.labels)}")
+            raise IndexError
         return {key: val[idx] for key, val in self.encodings.items()}
     
     def __len__(self):
+        logger.debug(f"[DEBUG] __len__ called. Length: {len(self.labels)}")
         return len(self.labels)
 
 def get_prompts_from_s3_dataset(s3_key: str) -> list[str]:
@@ -148,11 +152,17 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         model.train()
         optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 
+        seen_batches = 0
         for epoch in range(num_epochs):
             total_loss = 0
             dataloader = DataLoader(dataset, batch_size=1, shuffle=True, drop_last=False, num_workers=0)
+            assert len(dataloader) < 1000, "Dataloader length is unexpectedly large. Check dataset logic."
             logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
             for step, batch in enumerate(dataloader):
+                seen_batches += 1
+                if seen_batches > len(dataloader):
+                    logger.error("Too many steps, something's worng with dataloader")
+                    break
                 try:
                     logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
                     logger.debug("🧠 Moving batch to device...")
@@ -184,9 +194,13 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         logger.info("✅ Finished all epochs. Proceeding to save model...")
 
         # ✅ Step 5: Save
-        os.makedirs(SAVE_PATH, exist_ok=True)
-        model.save_pretrained(SAVE_PATH)
-        tokenizer.save_pretrained(SAVE_PATH)
+        try:
+            os.makedirs(SAVE_PATH, exist_ok=True)
+            model.save_pretrained(SAVE_PATH)
+            tokenizer.save_pretrained(SAVE_PATH)
+        except Exception as save_err:
+            logger.error(f"Model saving failed: {save_err}")
+            raise
 
         # ✅ After model.save_pretrained(SAVE_PATH)
         # Copy base model config into SAVE_PATH
