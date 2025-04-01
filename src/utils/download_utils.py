@@ -134,6 +134,7 @@ def download_model_from_huggingface():
         local_dir=HF_LOCAL_DIR,
         local_dir_use_symlinks=False,
         resume_download=True,
+        max_workers=1,
         ignore_patterns=["*.tflite", "*.ot", "*.mlmodel"],  # 용량 큰 필요 없는 파일 제거
     )
     print("[DEBUG] Model download complete.")
