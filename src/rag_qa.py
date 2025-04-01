@@ -48,13 +48,13 @@ def get_qa_pipeline(filename: str, model_choice: str):
         HF_CACHE = "/tmp/hf_cache"
 
         print("[DEBUG] Loading tokenizer...")
-        tokenizer = AutoTokenizer.from_pretrained(base_model_path, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
-        base_model = AutoModelForCausalLM.from_pretrained(base_model_path, cache_dir=HF_CACHE, local_files_only=True)
+        tokenizer = AutoTokenizer.from_pretrained(os.path.join(model_path, "_tokenizer"), cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
+        model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE, config=AutoConfig.from_pretrained(model_path))
         
         # Attach LoRA adapter
-        model = PeftModel.from_pretrained(base_model, model_path, local_files_only=True)
-        model.config.model_type = "gpt2"
-        model.to("cpu")
+        # model = PeftModel.from_pretrained(base_model, model_path, local_files_only=True)
+        # model.config.model_type = "gpt2"
+        # model.to("cpu")
 
         llm_pipeline = pipeline(
             "text-generation",
