@@ -4,7 +4,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.llms import huggingface_pipeline
 from langchain.chains import retrieval_qa
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, AutoConfig
+from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, AutoConfig, GPT2Config
 from lora_train import get_finedtuned_model_path
 import json
 
@@ -15,11 +15,10 @@ _qa_pipeline = None
 def safe_load_model(model_path: str):
     # ✅ Step 1: config.json 수정 확인 및 보완
     config_path = os.path.join(model_path, "config.json")
-    if os.path.exists(config_path):
-        with open(config_path, "r") as f:
-            config_data = json.load(f)
-    else:
-        config_data = {}
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"config.json not found in {model_path}")
+    with open(config_path, "r") as f:
+        config_data = json.load(f)
 
     # ✅ Step 2: model_type 자동 보완 (예: distilgpt2 → gpt2)
     if "model_type" not in config_data:
@@ -49,8 +48,12 @@ def get_qa_pipeline(filename: str, model_choice: str):
         print("[DEBUG] Loading tokenizer...")
         tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
 
+        print("[DEBUG] Forcing GPT2Config manually...")
+        config = GPT2Config.from_pretrained(model_path)
+
         print("[DEBUG] Loading model with config.json validation...")
-        model = safe_load_model(model_path).to("cpu")
+        #model = safe_load_model(model_path).to("cpu")
+        model = AutoModelForCausalLM.from_pretrained(model_path, config=config, cache_dir=HF_CACHE).to("cpu")
 
         llm_pipeline = pipeline(
             "text-generation",
