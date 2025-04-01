@@ -1,6 +1,6 @@
 import os
 import sys
-from models import run_cluster, run_classification
+from models import run_cluster, run_classification, common
 from utils.logger_utils import logger, upload_log_to_s3
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash, jsonify, session, Response
 from werkzeug.utils import secure_filename
@@ -20,6 +20,7 @@ from utils.download_utils import load_model_from_s3, download_llm_model_from_s3,
 from lora_train import train_lora_from_user_data, get_finedtuned_model_path, run_train_thread
 import threading
 import json
+import re
 
 # Load environment variables from .env file
 load_dotenv()
@@ -456,7 +457,7 @@ def chat_interface():
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
-    from transformers import AutoModelForCausalLM, AutoTokenizer
+    from transformers import AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel
 
     data = request.json
     print(f"ask_question: {data}")
@@ -488,13 +489,42 @@ def ask_question():
     if task == "classification" and input_data:
         try:
             model_clf = load_model_from_s3(model_s3_key, model_filename=model_name)
-            
+
             if model_clf:
-                prediction = model_clf.predict([input_data])[0]
+                # ✅ Step 0: Auto-extract feature columns from uploaded files
+                df_uploaded, _ = common.load_file(f"upload/{filename}")
+                IGNORE_COLUMNS = ["ID", "Timestamp", "target", "label"]
+                feature_columns = [col for col in df_uploaded.columns if col not in IGNORE_COLUMNS]
+
+                # ✅ Step 1: Processing User Input Values
+                if input_data:
+                    input_values = input_data
+                else:
+                    extracted = extract_numbers_from_text(question)
+                    if len(extracted) == len(feature_columns):
+                        input_values = extracted
+                    else:
+                        input_values = extract_values_from_natural_input(question, expected_len=len(feature_columns))
+
+                # ✅ Step 2: Convert DataFrame
+                if isinstance(input_values, list):
+                    df_input = pd.DataFrame([input_values], columns=feature_columns)
+                elif isinstance(input_values, dict):
+                    df_input = pd.DataFrame([input_values])
+                else:
+                    raise ValueError("The input format is not a list or dictionary.")
+
+                for col in df_input.columns:
+                    df_input[col] = pd.to_numeric(df_input[col], errors="ignore")
+
+                # ✅ Step 3: Prediction
+                prediction = model_clf.predict(df_input)[0]
                 context += f"\n\nPrediction result: {prediction}"
+
         except Exception as e:
             print(f"Classification prediction error: {e}")
-    
+            context += f"\n❌ Prediction error: {str(e)}"
+        
     # Auto-load LoRA model (first try fine-tuned model)
     try:
         LORA_MODEL_S3_KEY = "models/lora_finetuned"
@@ -533,7 +563,12 @@ def ask_question():
 
         # Load tokenizer and model
         tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
-        model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE, torch_dtype=torch.float32, device_map="auto", use_safetensors=True)
+        model = model = GPT2LMHeadModel.from_pretrained(
+            model_path,
+            cache_dir=HF_CACHE,
+            local_files_only=True,
+            trust_remote_code=True
+        )
         model.to("cpu")
     
     except Exception as e:
@@ -558,27 +593,22 @@ def ask_question():
     except Exception as e:
         return jsonify({"response": f"❌ Generation error: {str(e)}"})
 
-@app.route("/test_model_load")
-def test_model_load():
-    from transformers import AutoModelForCausalLM, AutoConfig
-    import os, json
+def extract_numbers_from_text(text):
+    """Extract only numbers from natural language sentences"""
+    return [float(n) for n in re.findall(r"[-+]?\d*\.\d+|\d+", text)]
 
-    model_path = "/tmp/lora_finetuned_model/Iris_naive_bayes"
-    tokenizer_path = os.path.join(model_path, "_tokenizer")
+def extract_values_from_natural_input(text, expected_len):
+    """Extract values from natural language sentences by commas or words (characteristic correspondence)"""
+    if ',' in text:
+        parts = [x.strip() for x in text.split(',')]
+    else:
+        parts = re.findall(r"\w[\w\-\.]*", text)
+    
+    if len(parts) != expected_len:
+        raise ValueError(f"Input count is different from feature count ({expected_len}): {parts}")
+    
+    return parts
 
-    try:
-        config = AutoConfig.from_pretrained(model_path, local_files_only=True)
-        model = AutoModelForCausalLM.from_pretrained(model_path, config=config, local_files_only=True)
-        return {
-            "status": "success",
-            "model_type": config.model_type,
-            "architectures": config.architectures
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e)
-        }
 
 if __name__ == '__main__':
     app.run(debug=True)
