@@ -98,6 +98,8 @@ RUN echo '#!/bin/sh' > /usr/local/bin/clean_tmp && \
     echo 'rm -rf /var/tmp/* /root/.cache/pip ~/.cache/pip' >> /usr/local/bin/clean_tmp && \
     chmod +x /usr/local/bin/clean_tmp
 
+ENV HF_HUB_ENABLE_HF_XET=0
+
 # 7. Run Flask server
 CMD ["sh", "-c", "/usr/local/bin/clean_tmp && exec python3.11 -m gunicorn -w 2 -b 0.0.0.0:5000 --timeout 1200 --worker-class gthread --threads 4 src.app:app"]
 
