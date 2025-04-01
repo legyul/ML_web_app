@@ -30,3 +30,5 @@ trl
 einops
 sentencepiece
 huggingface_hub
+
+hf_xet
