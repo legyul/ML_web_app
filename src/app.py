@@ -558,6 +558,27 @@ def ask_question():
     except Exception as e:
         return jsonify({"response": f"❌ Generation error: {str(e)}"})
 
+@app.route("/test_model_load")
+def test_model_load():
+    from transformers import AutoModelForCausalLM, AutoConfig
+    import os, json
+
+    model_path = "/tmp/lora_finetuned_model/Iris_naive_bayes"
+    tokenizer_path = os.path.join(model_path, "_tokenizer")
+
+    try:
+        config = AutoConfig.from_pretrained(model_path, local_files_only=True)
+        model = AutoModelForCausalLM.from_pretrained(model_path, config=config, local_files_only=True)
+        return {
+            "status": "success",
+            "model_type": config.model_type,
+            "architectures": config.architectures
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -115,7 +115,6 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
         # ✅ Step 3: Prepare Data
         prompts = get_prompts_from_s3_dataset(s3_dataset_key)
-        logger.debug(f"📄 Number of prompts: {len(prompts)}")
 
         if len(prompts) < 10:
             prompts *= (10 // len(prompts)) + 1
@@ -131,7 +130,6 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             num_epochs = 10
 
         dataset = PromptDataset(prompts, tokenizer)
-        logger.debug(f"📦 Dataset length: {len(dataset)}")
 
         # ✅ Step 4: Training
         model.train()
