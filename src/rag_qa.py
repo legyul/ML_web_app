@@ -53,7 +53,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         
         # Attach LoRA adapter
         model = PeftModel.from_pretrained(base_model, model_path, local_files_only=True)
-        model = model.merge_and_unload()
+        model.config.model_type = "gpt2"
         model.to("cpu")
 
         llm_pipeline = pipeline(
