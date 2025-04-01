@@ -202,27 +202,27 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
         # ✅ After model.save_pretrained(SAVE_PATH)
         # Copy base model config into SAVE_PATH
-        base_config_path = os.path.join(BASE_MODEL_DIR, "config.json")
-        target_config_path = os.path.join(SAVE_PATH, "config.json")
-        shutil.copyfile(base_config_path, target_config_path)
+        # base_config_path = os.path.join(BASE_MODEL_DIR, "config.json")
+        # target_config_path = os.path.join(SAVE_PATH, "config.json")
+        # shutil.copyfile(base_config_path, target_config_path)
         
-        # ✅ Step 6: Add model_type to config.json
-        config_path = os.path.join(SAVE_PATH, "config.json")
+        # # ✅ Step 6: Add model_type to config.json
+        # config_path = os.path.join(SAVE_PATH, "config.json")
         
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                config_data = json.load(f)
+        # if os.path.exists(config_path):
+        #     with open(config_path, "r") as f:
+        #         config_data = json.load(f)
             
-            config_data["model_type"] = "llama"
-            config_data["architectures"] = "LlamaForCausalLM"
+        #     config_data["model_type"] = "gpt2"
+        #     config_data["architectures"] = "LlamaForCausalLM"
 
             # with open(config_path, "w") as f:
             #     json.dump(config_data, f, indent=2)
             
             logger.info("Done edit config.json")
         
-        else:
-            logger.info("config.json not found")
+        # else:
+        #     logger.info("config.json not found")
 
         # ✅ Step 7: Upload to S3
         s3 = boto3.client('s3', region_name=os.getenv("AWS_REGION"), config=boto3.session.Config(signature_version='s3v4'))

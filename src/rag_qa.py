@@ -27,12 +27,13 @@ def get_qa_pipeline(filename: str, model_choice: str):
 
         model_path = get_finedtuned_model_path(filename, model_choice)
         HF_CACHE = "/tmp/hf_cache"
+        BASE_MODEL_DIR = "/tmp/distilgpt2"
 
         print("[DEBUG] Loading tokenizer...")
         tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
 
         print("[DEBUG] Loading model...")
-        base_model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE).to("cpu")
+        base_model = AutoModelForCausalLM.from_pretrained(BASE_MODEL_DIR, cache_dir=HF_CACHE).to("cpu")
         model = PeftModel.from_pretrained(base_model, model_path)
         model = model.to("cpu")
 
