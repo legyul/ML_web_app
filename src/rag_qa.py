@@ -4,15 +4,36 @@ from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.llms import huggingface_pipeline
 from langchain.chains import retrieval_qa
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
-import torch
+from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, AutoConfig
 from lora_train import get_finedtuned_model_path
-from peft import PeftModel, PeftConfig
+import json
 
 load_dotenv()
-
 # Lazy-load cache
 _qa_pipeline = None
+
+def safe_load_model(model_path: str):
+    # ✅ Step 1: config.json 수정 확인 및 보완
+    config_path = os.path.join(model_path, "config.json")
+    if os.path.exists(config_path):
+        with open(config_path, "r") as f:
+            config_data = json.load(f)
+    else:
+        config_data = {}
+
+    # ✅ Step 2: model_type 자동 보완 (예: distilgpt2 → gpt2)
+    if "model_type" not in config_data:
+        print("🔧 'model_type' not found in config.json. Adding it manually...")
+        # 아래는 사용자 선택에 따라 고칠 수 있음
+        config_data["model_type"] = "gpt2"  # 사용 중인 모델에 따라 변경
+        with open(config_path, "w") as f:
+            json.dump(config_data, f)
+        print("✅ 'model_type' successfully inserted into config.json.")
+
+    # ✅ Step 3: config와 model 함께 로드
+    config = AutoConfig.from_pretrained(model_path)
+    model = AutoModelForCausalLM.from_pretrained(model_path, config=config)
+    return model
 
 def get_qa_pipeline(filename: str, model_choice: str):
     global _qa_pipeline
@@ -20,22 +41,17 @@ def get_qa_pipeline(filename: str, model_choice: str):
         return _qa_pipeline
 
     try:
-        print("[DEBUG] Loading RAG pipeline with PEFT")
+        print("[DEBUG] Loading RAG pipeline")
+
         model_path = get_finedtuned_model_path(filename, model_choice)
         HF_CACHE = "/tmp/hf_cache"
 
-        # 🔧 1. PEFT 설정 로드
-        peft_config = PeftConfig.from_pretrained(model_path)
-        base_model_path = peft_config.base_model_name_or_path
+        print("[DEBUG] Loading tokenizer...")
+        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
 
-        # 🔧 2. Base model + tokenizer 로드
-        tokenizer = AutoTokenizer.from_pretrained(base_model_path, cache_dir=HF_CACHE, use_fast=False)
-        base_model = AutoModelForCausalLM.from_pretrained(base_model_path, cache_dir=HF_CACHE)
+        print("[DEBUG] Loading model with config.json validation...")
+        model = safe_load_model(model_path).to("cpu")
 
-        # 🔧 3. LoRA 적용된 모델 로드
-        model = PeftModel.from_pretrained(base_model, model_path).to("cpu")
-
-        # 🔧 4. Text-generation 파이프라인 구성
         llm_pipeline = pipeline(
             "text-generation",
             model=model,
@@ -46,22 +62,19 @@ def get_qa_pipeline(filename: str, model_choice: str):
             top_p=0.95
         )
 
-        # 🔧 5. Vector DB 로드
         EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
         CHROMA_PATH = os.getenv("CHROMA_PATH", "./chroma_db")
-
         embedding_function = HuggingFaceEmbeddings(model_name=EMBED_MODEL_NAME)
         vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
         llm = huggingface_pipeline(pipeline=llm_pipeline)
-
         _qa_pipeline = retrieval_qa.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
 
         print("✅ QA Pipeline loaded successfully.")
         return _qa_pipeline
 
     except Exception as e:
-        print(f"❌ Failed to load LoRA model with PEFT: {e}")
+        print(f"❌ Failed to load QA pipeline: {e}")
         return None
     
 def run_qa(query: str, filename: str, model_choice: str) -> str:
