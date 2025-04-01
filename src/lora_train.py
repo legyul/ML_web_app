@@ -118,13 +118,8 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         logger.debug(f"📄 Number of prompts: {len(prompts)}")
 
         if len(prompts) < 10:
-            logger.warning(f"📉 Prompt 개수 너무 적음: {len(prompts)} → 데이터 증강 시작")
-
-            # row를 복제해서 prompt 수 늘리기
             prompts *= (10 // len(prompts)) + 1
-            prompts = prompts[:10]  # 10개까지만 사용
-
-        logger.info(f"✅ 최종 prompt 개수: {len(prompts)}")
+            prompts = prompts[:10] 
 
         prompt_count = len(prompts)
 
@@ -148,14 +143,14 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             total_loss = 0
             dataloader = DataLoader(dataset, batch_size=1, shuffle=True, drop_last=False, num_workers=0)
             assert len(dataloader) < 1000, "Dataloader length is unexpectedly large. Check dataset logic."
-            logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
+            
             for step, batch in enumerate(dataloader):
                 seen_batches += 1
                 if seen_batches > len(dataloader):
                     logger.error("Too many steps, something's worng with dataloader")
                     break
                 try:
-                    logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
+                    
                     logger.debug("🧠 Moving batch to device...")
                     batch = {k: v.to(device) for k, v in batch.items()}
                     logger.debug("✅ Batch moved to device")
@@ -169,13 +164,12 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
                         logger.error("❌ NaN loss detected! Stopping training.")
                         break
 
-                    logger.debug("🌀 Backward 시작")
                     start = time.time()
                     loss.backward()
-                    logger.debug(f"✅ Backward 끝 (소요시간: {time.time() - start:.2f}초)")
-                    logger.debug("💾 Optimizer step 시작")
+                    logger.debug(f"✅ Done Backward (time: {time.time() - start:.2f}seconds)")
+                    logger.debug("💾 Start Optimizer step")
                     optimizer.step()
-                    logger.debug("💾 Optimizer step 끝")
+                    logger.debug("💾 Done Optimizer step")
                     optimizer.zero_grad()
                     total_loss += loss.item()
                 except Exception as e:
@@ -211,13 +205,9 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
         with open(config_path, "w") as f:
             json.dump(config_dict, f, indent=2)
-            logger.info("🛡️ config.json 직접 저장 완료: model_type 포함됨")
-            print("🛡️ config.json 직접 저장 완료: model_type 포함됨")
         
         with open(config_path, "r") as f:
             conf = json.load(f)
-            logger.info(f"🧪 저장 직후 config.json 내용 (model_type): {conf.get('model_type')}")
-            print(f"🧪 저장 직후 config.json 내용 (model_type): {conf.get('model_type')}")
         
         tokenizer.save_pretrained(os.path.join(SAVE_PATH, "_tokenizer"))
             

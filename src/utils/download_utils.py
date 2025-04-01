@@ -64,7 +64,6 @@ def download_llm_model_from_s3(S3_REGION, S3_BUCKET_NAME, s3_model_path, local_d
                 except ClientError as e:
                     logger.error(f"Failed to download {filename} from S3: {e}")
 
-            
         else:
             logger.error(f"No model files found in S3 path: {s3_model_path}")
     
@@ -127,7 +126,7 @@ def download_model_from_huggingface():
         return
 
     print("[DEBUG] Downloading model from Hugging Face...")
-    os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"  # 안정성 증가
+    os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1" 
 
     snapshot_download(
         repo_id=HF_MODEL_ID,
@@ -135,6 +134,6 @@ def download_model_from_huggingface():
         local_dir_use_symlinks=False,
         resume_download=True,
         max_workers=1,
-        ignore_patterns=["*.tflite", "*.ot", "*.mlmodel"],  # 용량 큰 필요 없는 파일 제거
+        ignore_patterns=["*.tflite", "*.ot", "*.mlmodel"],
     )
     print("[DEBUG] Model download complete.")
