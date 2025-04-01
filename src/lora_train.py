@@ -200,6 +200,10 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             logger.error(f"Model saving failed: {save_err}")
             raise
 
+        with open(config_path) as f:
+            config_preview = json.load(f)
+            logger.debug(f"✅ config.json preview before full save: {list(config_preview.keys())[:10]}")
+
         # ✅ After model.save_pretrained(SAVE_PATH)
         # Copy base model config into SAVE_PATH
         # base_config_path = os.path.join(BASE_MODEL_DIR, "config.json")
