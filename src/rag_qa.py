@@ -7,6 +7,7 @@ from langchain.chains import retrieval_qa
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
 import torch
 from lora_train import get_finedtuned_model_path
+from peft import PeftModel
 
 load_dotenv()
 
@@ -31,7 +32,9 @@ def get_qa_pipeline(filename: str, model_choice: str):
         tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
 
         print("[DEBUG] Loading model...")
-        model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE).to("cpu")
+        base_model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE).to("cpu")
+        model = PeftModel.from_pretrained(base_model, model_path)
+        model = model.to("cpu")
 
         # Pipeline settings
         llm_pipeline = pipeline(
