@@ -9,6 +9,7 @@ from utils.logger_utils import logger
 from models.common import load_file
 import shutil
 import time
+from pathlib import Path
 
 device = torch.device("cpu")
 
@@ -39,17 +40,20 @@ def sanitize_model_name(name: str) -> str:
 
 def get_finedtuned_model_path(upload_filename: str, selected_model: str) -> str:
     """
-    Create a unique path with the file name uploaded by the user and the classification model name selected
+    Create a unique absolute path with the uploaded file name and model name, in POSIX format.
+    This prevents Hugging Face from mistaking it for a repo ID.
     """
     logger.info(f"get_finedtuned_model: {selected_model}")
     safe_model = sanitize_model_name(selected_model)
     filename_no_ext = os.path.splitext(os.path.basename(upload_filename))[0]
     model_folder_name = f"{filename_no_ext}_{safe_model}"
 
-    path = os.path.join("/tmp/lora_finetuned_model", model_folder_name)
-    logger.info(f"finetuned model path: {path}")
+    # ✅ 절대 경로 + POSIX 문자열
+    path = Path("/tmp/lora_finetuned_model") / model_folder_name
+    resolved_path = path.resolve().as_posix()
 
-    return path
+    logger.info(f"finetuned model path: {resolved_path}")
+    return resolved_path
 
 def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model: str):
     logger.debug("[DEBUG] Entered train_lora_from_user_data()")
@@ -195,14 +199,9 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         try:
             os.makedirs(SAVE_PATH, exist_ok=True)
             model.save_pretrained(SAVE_PATH)
-            model.config.to_json_file(os.path.join(SAVE_PATH, "config.json"))
         except Exception as save_err:
             logger.error(f"Model saving failed: {save_err}")
             raise
-
-        with open(config_path) as f:
-            config_preview = json.load(f)
-            logger.debug(f"✅ config.json preview before full save: {list(config_preview.keys())[:10]}")
 
         # ✅ After model.save_pretrained(SAVE_PATH)
         # Copy base model config into SAVE_PATH
@@ -214,11 +213,21 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         config_path = os.path.join(SAVE_PATH, "config.json")
         config_dict = model.config.to_dict()
 
-        config_dict["model_type"] = "gpt2"
-        config_dict["architectures"] = ["GPT2LMHeadModel"]
+        if "model_type" not in config_dict:
+            config_dict["model_type"] = "gpt2"
+        
+        if "architectures" not in config_dict:
+            config_dict["architectures"] = ["GPT2LMHeadModel"]
 
         with open(config_path, "w") as f:
             json.dump(config_data, f, indent=2)
+            logger.info("🛡️ config.json 직접 저장 완료: model_type 포함됨")
+            print("🛡️ config.json 직접 저장 완료: model_type 포함됨")
+        
+        with open(config_path, "r") as f:
+            conf = json.load(f)
+            logger.info(f"🧪 저장 직후 config.json 내용 (model_type): {conf.get('model_type')}")
+            print(f"🧪 저장 직후 config.json 내용 (model_type): {conf.get('model_type')}")
         
         tokenizer.save_pretrained(os.path.join(SAVE_PATH, "_tokenizer"))
             

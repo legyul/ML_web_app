@@ -8,6 +8,7 @@ from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, AutoConf
 from lora_train import get_finedtuned_model_path
 import json
 from peft import PeftModel, PeftConfig
+from pathlib import Path
 
 load_dotenv()
 # Lazy-load cache
@@ -43,7 +44,8 @@ def get_qa_pipeline(filename: str, model_choice: str):
     try:
         print("[DEBUG] Loading RAG pipeline")
 
-        model_path = get_finedtuned_model_path(filename, model_choice)
+        # model_path = get_finedtuned_model_path(filename, model_choice)
+        model_path = model_path = Path(f"/tmp/lora_finetuned_model/{filename}_naive_bayes").resolve().as_posix()
         tokenizer_path = os.path.join(model_path, "_toeknizer")
         base_model_path = "/tmp/distilgpt2"
         HF_CACHE = "/tmp/hf_cache"
