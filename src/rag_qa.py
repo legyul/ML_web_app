@@ -49,7 +49,9 @@ def get_qa_pipeline(filename: str, model_choice: str):
 
         print("[DEBUG] Loading tokenizer...")
         tokenizer = AutoTokenizer.from_pretrained(os.path.join(model_path, "_tokenizer"), cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
-        model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE, config=AutoConfig.from_pretrained(model_path))
+        
+        config = AutoConfig.from_pretrained(model_path)
+        model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE, config=config)
         
         # Attach LoRA adapter
         # model = PeftModel.from_pretrained(base_model, model_path, local_files_only=True)

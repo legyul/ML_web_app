@@ -195,7 +195,6 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         try:
             os.makedirs(SAVE_PATH, exist_ok=True)
             model.save_pretrained(SAVE_PATH)
-            tokenizer.save_pretrained(SAVE_PATH, "_tokenizer")
         except Exception as save_err:
             logger.error(f"Model saving failed: {save_err}")
             raise
@@ -222,6 +221,8 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
             with open(config_path, "w") as f:
                 json.dump(config_data, f, indent=2)
+        
+        tokenizer.save_pretrained(os.path.join(SAVE_PATH, "_tokenizer"))
             
             # logger.info("Done edit config.json")
         
