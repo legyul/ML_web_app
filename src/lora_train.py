@@ -212,16 +212,13 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         
         # ✅ Step 6: Add model_type to config.json
         config_path = os.path.join(SAVE_PATH, "config.json")
-        
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                config_data = json.load(f)
-            
-            config_data["model_type"] = "gpt2"
-            config_data["architectures"] = ["GPT2LMHeadModel"]
+        config_dict = model.config.to_dict()
 
-            with open(config_path, "w") as f:
-                json.dump(config_data, f, indent=2)
+        config_dict["model_type"] = "gpt2"
+        config_dict["architectures"] = ["GPT2LMHeadModel"]
+
+        with open(config_path, "w") as f:
+            json.dump(config_data, f, indent=2)
         
         tokenizer.save_pretrained(os.path.join(SAVE_PATH, "_tokenizer"))
             
