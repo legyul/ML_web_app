@@ -150,8 +150,8 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
         for epoch in range(num_epochs):
             total_loss = 0
-            logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
             dataloader = DataLoader(dataset, batch_size=1, shuffle=True, drop_last=False, num_workers=0)
+            logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
             for step, batch in enumerate(dataloader):
                 try:
                     logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
