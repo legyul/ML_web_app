@@ -15,29 +15,19 @@ load_dotenv()
 _qa_pipeline = None
 
 def get_qa_pipeline(filename: str, model_choice: str):
-    """
-    Initialize a system that finds similar documents when asked and causes LLM to generate answers
-    """
     global _qa_pipeline
     if _qa_pipeline is not None:
         return _qa_pipeline
     
     try:
-        print("[DEBUG] Loading RAG pipeline (no model download)")
-
+        print("[DEBUG] Loading RAG pipeline (GPT2 forced load)")
         model_path = get_finedtuned_model_path(filename, model_choice)
         HF_CACHE = "/tmp/hf_cache"
-        BASE_MODEL_DIR = "/tmp/distilgpt2"
 
-        print("[DEBUG] Loading tokenizer...")
-        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
+        # 강제 GPT2 모델 로딩
+        tokenizer = GPT2Tokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
+        model = GPT2LMHeadModel.from_pretrained(model_path, cache_dir=HF_CACHE).to("cpu")
 
-        print("[DEBUG] Loading model...")
-        base_model = AutoModelForCausalLM.from_pretrained(BASE_MODEL_DIR, cache_dir=HF_CACHE).to("cpu")
-        model = PeftModel.from_pretrained(base_model, model_path)
-        model = model.to("cpu")
-
-        # Pipeline settings
         llm_pipeline = pipeline(
             "text-generation",
             model=model,
@@ -48,18 +38,12 @@ def get_qa_pipeline(filename: str, model_choice: str):
             top_p=0.95
         )
 
-        # Loading Vector DB
-        from langchain_community.vectorstores import Chroma
-        from langchain_huggingface import HuggingFaceEmbeddings
-        from langchain.chains import retrieval_qa
-
         EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
         CHROMA_PATH = os.getenv("CHROMA_PATH", "./chroma_db")
 
         embedding_function = HuggingFaceEmbeddings(model_name=EMBED_MODEL_NAME)
         vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
-        from langchain_community.llms import huggingface_pipeline
         llm = huggingface_pipeline(pipeline=llm_pipeline)
 
         _qa_pipeline = retrieval_qa.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
@@ -70,7 +54,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
     except Exception as e:
         print(f"❌ Failed to load LoRA model: {e}")
         return None
-
+    
 def run_qa(query: str, filename: str, model_choice: str) -> str:
     """
     Create a RAG QA response to a user's question
