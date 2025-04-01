@@ -143,7 +143,6 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
         dataset = PromptDataset(prompts, tokenizer)
         logger.debug(f"📦 Dataset length: {len(dataset)}")
-        dataloader = DataLoader(dataset, batch_size=1, shuffle=True, drop_last=False, num_workers=0)
 
         # ✅ Step 4: Training
         model.train()
@@ -152,6 +151,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         for epoch in range(num_epochs):
             total_loss = 0
             logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
+            dataloader = DataLoader(dataset, batch_size=1, shuffle=True, drop_last=False, num_workers=0)
             for step, batch in enumerate(dataloader):
                 try:
                     logger.debug(f"💡 Epoch {epoch+1} 시작 - 총 배치 수: {len(dataloader)}")
@@ -179,7 +179,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
                     total_loss += loss.item()
                 except Exception as e:
                     logger.error(f"❌ Error during training step: {e}")
-            logger.info(f"Epoch {epoch+1} - Loss: {total_loss:.4f}")
+            logger.info(f"Epoch {epoch+1} Finished - Loss: {total_loss:.4f}")
         
         logger.info("✅ Finished all epochs. Proceeding to save model...")
 
