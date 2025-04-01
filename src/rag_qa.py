@@ -7,6 +7,7 @@ from langchain.chains import retrieval_qa
 from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, AutoConfig, GPT2Config
 from lora_train import get_finedtuned_model_path
 import json
+from peft import PeftModel, PeftConfig
 
 load_dotenv()
 # Lazy-load cache
@@ -43,17 +44,17 @@ def get_qa_pipeline(filename: str, model_choice: str):
         print("[DEBUG] Loading RAG pipeline")
 
         model_path = get_finedtuned_model_path(filename, model_choice)
+        base_model_path = "/tmp/distilgpt2"
         HF_CACHE = "/tmp/hf_cache"
 
         print("[DEBUG] Loading tokenizer...")
-        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
-
-        print("[DEBUG] Forcing GPT2Config manually...")
-        config = GPT2Config.from_pretrained(model_path)
-
-        print("[DEBUG] Loading model with config.json validation...")
-        #model = safe_load_model(model_path).to("cpu")
-        model = AutoModelForCausalLM.from_pretrained(model_path, config=config, cache_dir=HF_CACHE).to("cpu")
+        tokenizer = AutoTokenizer.from_pretrained(base_model_path, cache_dir=HF_CACHE, use_fast=False)
+        base_model = AutoModelForCausalLM.from_pretrained(base_model_path, cache_dir=HF_CACHE)
+        
+        # Attach LoRA adapter
+        model = PeftModel.from_pretrained(base_model, model_path)
+        model = model.merge_and_unload()
+        model.to("cpu")
 
         llm_pipeline = pipeline(
             "text-generation",
