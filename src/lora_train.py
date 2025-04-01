@@ -20,13 +20,9 @@ class PromptDataset(Dataset):
         self.encodings["labels"] = self.labels
     
     def __getitem__(self, idx):
-        if idx >= len(self.labels):
-            logger.error(f"❌ Invalid index access: {idx} >= {len(self.labels)}")
-            raise IndexError
         return {key: val[idx] for key, val in self.encodings.items()}
     
     def __len__(self):
-        logger.debug(f"[DEBUG] __len__ called. Length: {len(self.labels)}")
         return len(self.labels)
 
 def get_prompts_from_s3_dataset(s3_key: str) -> list[str]:
@@ -139,18 +135,19 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         prompt_count = len(prompts)
 
         if prompt_count < 50:
-            num_epochs = 5
+            num_epochs = 15
         elif prompt_count < 200:
-            num_epochs = 3
+            num_epochs = 13
         else:
-            num_epochs = 2
+            num_epochs = 10
 
         dataset = PromptDataset(prompts, tokenizer)
         logger.debug(f"📦 Dataset length: {len(dataset)}")
 
         # ✅ Step 4: Training
         model.train()
-        optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5, weight_decay=0.01)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.8)
 
         seen_batches = 0
         for epoch in range(num_epochs):
@@ -189,6 +186,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
                     total_loss += loss.item()
                 except Exception as e:
                     logger.error(f"❌ Error during training step: {e}")
+            scheduler.step()
             logger.info(f"Epoch {epoch+1} Finished - Loss: {total_loss:.4f}")
         
         logger.info("✅ Finished all epochs. Proceeding to save model...")
