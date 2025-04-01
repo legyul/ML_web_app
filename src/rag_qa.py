@@ -44,16 +44,16 @@ def get_qa_pipeline(filename: str, model_choice: str):
     try:
         print("[DEBUG] Loading RAG pipeline")
 
-        # model_path = get_finedtuned_model_path(filename, model_choice)
-        model_path = model_path = Path(f"/tmp/lora_finetuned_model/{filename}_naive_bayes").resolve().as_posix()
-        tokenizer_path = os.path.join(model_path, "_toeknizer")
-        base_model_path = "/tmp/distilgpt2"
+        model_path = get_finedtuned_model_path(filename, model_choice)
+        tokenizer_path = os.path.join(model_path, "_tokenizer")
+        
         HF_CACHE = "/tmp/hf_cache"
 
         print("[DEBUG] Loading tokenizer...")
         
         config = AutoConfig.from_pretrained(model_path, local_files_only=True)
         model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE, config=config, local_files_only=True, trust_remote_code=True)
+        model.to("cpu")
         
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
         

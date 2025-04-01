@@ -39,21 +39,11 @@ def sanitize_model_name(name: str) -> str:
     return name.strip().lower().replace(" ", "_")
 
 def get_finedtuned_model_path(upload_filename: str, selected_model: str) -> str:
-    """
-    Create a unique absolute path with the uploaded file name and model name, in POSIX format.
-    This prevents Hugging Face from mistaking it for a repo ID.
-    """
-    logger.info(f"get_finedtuned_model: {selected_model}")
     safe_model = sanitize_model_name(selected_model)
     filename_no_ext = os.path.splitext(os.path.basename(upload_filename))[0]
     model_folder_name = f"{filename_no_ext}_{safe_model}"
-
-    # ✅ 절대 경로 + POSIX 문자열
-    path = Path("/tmp/lora_finetuned_model") / model_folder_name
-    resolved_path = path.resolve().as_posix()
-
-    logger.info(f"finetuned model path: {resolved_path}")
-    return resolved_path
+    abs_path = Path("/tmp/lora_finetuned_model") / model_folder_name
+    return abs_path.resolve().as_posix()
 
 def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model: str):
     logger.debug("[DEBUG] Entered train_lora_from_user_data()")
@@ -220,7 +210,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             config_dict["architectures"] = ["GPT2LMHeadModel"]
 
         with open(config_path, "w") as f:
-            json.dump(config_data, f, indent=2)
+            json.dump(config_dict, f, indent=2)
             logger.info("🛡️ config.json 직접 저장 완료: model_type 포함됨")
             print("🛡️ config.json 직접 저장 완료: model_type 포함됨")
         
