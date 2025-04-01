@@ -114,25 +114,26 @@ def download_model_from_huggingface():
     HF_LOCAL_DIR = "/tmp/distilgpt2"
 
     REQUIRED_FILES = [
-            "config.json",
-            "tokenizer_config.json",
-            "tokenizer.json",
-            "tokenizer.model",
-            "special_tokens_map.json",
-            "generation_config.json",
-            "model.safetensors"
-        ]
-    
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "special_tokens_map.json",
+        "generation_config.json",
+        "model.safetensors",
+    ]
+
     if all(os.path.exists(os.path.join(HF_LOCAL_DIR, f)) for f in REQUIRED_FILES):
         print("[DEBUG] Model already fully exists. Skipping download.")
         return
 
     print("[DEBUG] Downloading model from Hugging Face...")
+    os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"  # 안정성 증가
+
     snapshot_download(
         repo_id=HF_MODEL_ID,
         local_dir=HF_LOCAL_DIR,
         local_dir_use_symlinks=False,
-        resume_download=True
+        resume_download=True,
+        ignore_patterns=["*.tflite", "*.ot", "*.mlmodel"],  # 용량 큰 필요 없는 파일 제거
     )
     print("[DEBUG] Model download complete.")
-    

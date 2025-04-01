@@ -219,7 +219,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             # with open(config_path, "w") as f:
             #     json.dump(config_data, f, indent=2)
             
-            logger.info("Done edit config.json")
+            # logger.info("Done edit config.json")
         
         # else:
         #     logger.info("config.json not found")
