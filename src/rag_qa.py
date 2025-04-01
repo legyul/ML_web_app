@@ -44,11 +44,12 @@ def get_qa_pipeline(filename: str, model_choice: str):
         print("[DEBUG] Loading RAG pipeline")
 
         model_path = get_finedtuned_model_path(filename, model_choice)
+        tokenizer_path = os.path.join(model_path, "_toeknizer")
         base_model_path = "/tmp/distilgpt2"
         HF_CACHE = "/tmp/hf_cache"
 
         print("[DEBUG] Loading tokenizer...")
-        tokenizer = AutoTokenizer.from_pretrained(os.path.join(model_path, "_tokenizer"), cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
         
         config = AutoConfig.from_pretrained(model_path)
         model = AutoModelForCausalLM.from_pretrained(model_path, cache_dir=HF_CACHE, config=config)

@@ -195,6 +195,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         try:
             os.makedirs(SAVE_PATH, exist_ok=True)
             model.save_pretrained(SAVE_PATH)
+            model.config.to_json_file(os.path.join(SAVE_PATH, "config.json"))
         except Exception as save_err:
             logger.error(f"Model saving failed: {save_err}")
             raise
@@ -217,7 +218,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
                 config_data = json.load(f)
             
             config_data["model_type"] = "gpt2"
-            config_data["architectures"] = "LlamaForCausalLM"
+            config_data["architectures"] = ["GPT2LMHeadModel"]
 
             with open(config_path, "w") as f:
                 json.dump(config_data, f, indent=2)
