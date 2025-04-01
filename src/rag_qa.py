@@ -13,27 +13,27 @@ load_dotenv()
 # Lazy-load cache
 _qa_pipeline = None
 
-def safe_load_model(model_path: str):
-    # ✅ Step 1: config.json 수정 확인 및 보완
-    config_path = os.path.join(model_path, "config.json")
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"config.json not found in {model_path}")
-    with open(config_path, "r") as f:
-        config_data = json.load(f)
+# def safe_load_model(model_path: str):
+#     # ✅ Step 1: config.json 수정 확인 및 보완
+#     config_path = os.path.join(model_path, "config.json")
+#     if not os.path.exists(config_path):
+#         raise FileNotFoundError(f"config.json not found in {model_path}")
+#     with open(config_path, "r") as f:
+#         config_data = json.load(f)
 
-    # ✅ Step 2: model_type 자동 보완 (예: distilgpt2 → gpt2)
-    if "model_type" not in config_data:
-        print("🔧 'model_type' not found in config.json. Adding it manually...")
-        # 아래는 사용자 선택에 따라 고칠 수 있음
-        config_data["model_type"] = "gpt2"  # 사용 중인 모델에 따라 변경
-        with open(config_path, "w") as f:
-            json.dump(config_data, f)
-        print("✅ 'model_type' successfully inserted into config.json.")
+#     # ✅ Step 2: model_type 자동 보완 (예: distilgpt2 → gpt2)
+#     if "model_type" not in config_data:
+#         print("🔧 'model_type' not found in config.json. Adding it manually...")
+#         # 아래는 사용자 선택에 따라 고칠 수 있음
+#         config_data["model_type"] = "gpt2"  # 사용 중인 모델에 따라 변경
+#         with open(config_path, "w") as f:
+#             json.dump(config_data, f)
+#         print("✅ 'model_type' successfully inserted into config.json.")
 
-    # ✅ Step 3: config와 model 함께 로드
-    config = AutoConfig.from_pretrained(model_path)
-    model = AutoModelForCausalLM.from_pretrained(model_path, config=config)
-    return model
+#     # ✅ Step 3: config와 model 함께 로드
+#     config = AutoConfig.from_pretrained(model_path)
+#     model = AutoModelForCausalLM.from_pretrained(model_path, config=config)
+#     return model
 
 def get_qa_pipeline(filename: str, model_choice: str):
     global _qa_pipeline
