@@ -180,6 +180,8 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         # ✅ Step 5: Save
         try:
             os.makedirs(SAVE_PATH, exist_ok=True)
+            if hasattr(model, "merge_and_unload"):
+                model = model.merge_and_unload()
 
             model.save_pretrained(SAVE_PATH)
         except Exception as save_err:
@@ -196,17 +198,11 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         config_path = os.path.join(SAVE_PATH, "config.json")
         config_dict = model.config.to_dict()
 
-        if "model_type" not in config_dict:
-            config_dict["model_type"] = "gpt2"
-        
-        if "architectures" not in config_dict:
-            config_dict["architectures"] = ["GPT2LMHeadModel"]
+        config_dict["model_type"] = "gpt2"
+        config_dict["architectures"] = ["GPT2LMHeadModel"]
 
         with open(config_path, "w") as f:
             json.dump(config_dict, f, indent=2)
-        
-        with open(config_path, "r") as f:
-            conf = json.load(f)
         
         tokenizer.save_pretrained(os.path.join(SAVE_PATH, "_tokenizer"))
             

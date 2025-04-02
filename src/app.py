@@ -551,8 +551,6 @@ def ask_question():
                 REQUIRED_FILES
             )
 
-            AutoModelForCausalLM.register("gpt2", GPT2LMHeadModel)
-
             config_path = os.path.join(model_path, "config.json")
             with open(config_path, "r") as f:
                 config_data = json.load(f)

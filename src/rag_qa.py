@@ -4,7 +4,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.llms import huggingface_pipeline
 from langchain.chains import retrieval_qa
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, GPT2Config, GPT2LMHeadModel 
+from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, GPT2Config, GPT2LMHeadModel, CONFIG_MAPPING
 from lora_train import get_finedtuned_model_path
 import json
 from peft import PeftModel, PeftConfig
@@ -28,24 +28,26 @@ def get_qa_pipeline(filename: str, model_choice: str):
         HF_CACHE = "/tmp/hf_cache"
 
         print("[DEBUG] Loading tokenizer...")
-        AutoModelForCausalLM.register("gpt2", GPT2LMHeadModel)
+        if "gpt2" not in CONFIG_MAPPING:
+            AutoModelForCausalLM.register("gpt2", GPT2LMHeadModel)
+
         with open(os.path.join(model_path, "config.json"), "r") as f:
             config_dict = json.load(f)
         
-        if "model_type" not in config_dict:
-            config_dict["model_type"] = "gpt2"
-        if "architectures" not in config_dict:
-            config_dict["architectures"] = ["GPT2LMHeadModel"]
+        config_dict["model_type"] = "gpt2"
+        config_dict["architectures"] = ["GPT2LMHeadModel"]
         
         config = GPT2Config.from_dict(config_dict)
         
         model = GPT2LMHeadModel.from_pretrained(  # ✅ AutoModel → 직접 명시
             model_path,
             cache_dir=HF_CACHE,
+            config=config,
             local_files_only=True,
             trust_remote_code=True,
             use_safetensors=True
         )
+        model.to("cpu")
 
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
         
