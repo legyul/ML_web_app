@@ -551,17 +551,6 @@ def ask_question():
                 REQUIRED_FILES
             )
 
-        config_path = os.path.join(model_path, "config.json")
-        
-        config_dict = model.config.to_dict()
-        config_dict.update({
-            "model_type": "gpt2",
-            "architectures": ["GPT2LMHeadModel"],
-            "torch_dtype": "float32"
-        })
-
-        with open(config_path, "w") as f:
-            json.dump(config_dict, f, indent=2)
 
         model_path = get_finedtuned_model_path(filename, model_choice)
 
@@ -576,6 +565,18 @@ def ask_question():
 
         tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
     
+        config_path = os.path.join(model_path, "config.json")
+        
+        config_dict = model.config.to_dict()
+        config_dict.update({
+            "model_type": "gpt2",
+            "architectures": ["GPT2LMHeadModel"],
+            "torch_dtype": "float32"
+        })
+
+        with open(config_path, "w") as f:
+            json.dump(config_dict, f, indent=2)
+            
     except Exception as e:
         print(f"Failed to load fine-tuned model: {e}")
         return jsonify({"response": f"❌ Failed to load LoRA model: {str(e)}"})
