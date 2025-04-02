@@ -580,8 +580,7 @@ def ask_question():
             cache_dir=HF_CACHE,
             local_files_only=True,
             trust_remote_code=True,
-            use_safetensors=True,
-            config=config
+            use_safetensors=True
         )
 
         tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)

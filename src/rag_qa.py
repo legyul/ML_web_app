@@ -44,8 +44,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
             cache_dir=HF_CACHE,
             local_files_only=True,
             trust_remote_code=True,
-            use_safetensors=True,
-            config=config
+            use_safetensors=True
         )
 
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
