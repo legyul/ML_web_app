@@ -458,7 +458,7 @@ def chat_interface():
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
-    from transformers import GPT2Config, AutoTokenizer, GPT2LMHeadModel, AutoModelForCausalLM
+    from transformers import AutoTokenizer, GPT2LMHeadModel, AutoModelForCausalLM
 
     data = request.json
     print(f"ask_question: {data}")
@@ -552,18 +552,14 @@ def ask_question():
             )
 
         config_path = os.path.join(model_path, "config.json")
+        
+        config_dict = model.config.to_dict()
+        config_dict.update({
+            "model_type": "gpt2",
+            "architectures": ["GPT2LMHeadModel"],
+            "torch_dtype": "float32"
+        })
 
-        with open(config_path, "r") as f:
-            config_dict = json.load(f)
-        
-        if not isinstance(config_dict, dict):
-            raise ValueError("config.json is not a valid dict!")
-        
-        if "model_type" not in config_dict:
-            config_dict["model_type"] = "gpt2"
-        if "architectures" not in config_dict:
-            config_dict["architectures"] = ["GPT2LMHeadModel"]
-        
         with open(config_path, "w") as f:
             json.dump(config_dict, f, indent=2)
 

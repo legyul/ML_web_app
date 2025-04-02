@@ -4,7 +4,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.llms import huggingface_pipeline
 from langchain.chains import retrieval_qa
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, GPT2Config, GPT2LMHeadModel, CONFIG_MAPPING
+from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel, CONFIG_MAPPING
 from lora_train import get_finedtuned_model_path
 import json
 from peft import PeftModel, PeftConfig
