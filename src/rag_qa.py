@@ -28,8 +28,6 @@ def get_qa_pipeline(filename: str, model_choice: str):
         HF_CACHE = "/tmp/hf_cache"
 
         print("[DEBUG] Loading tokenizer...")
-
-        config = GPT2Config.from_pretrained(model_path, local_files_only=True)
         
         model = GPT2LMHeadModel.from_pretrained( 
             model_path,

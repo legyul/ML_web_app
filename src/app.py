@@ -551,20 +551,13 @@ def ask_question():
                 REQUIRED_FILES
             )
 
-            config_path = os.path.join(model_path, "config.json")
-            with open(config_path, "r") as f:
-                config_data = json.load(f)
+        config_path = os.path.join(model_path, "config.json")
 
-            config_data["torch_dtype"] = "float32"
-
-            with open(config_path, "w") as f:
-                json.dump(config_data, f, indent=2)
-        
-        model_path = get_finedtuned_model_path(filename, model_choice)
-
-        # Load tokenizer and model
-        with open(os.path.join(model_path, "config.json"), "r") as f:
+        with open(config_path, "r") as f:
             config_dict = json.load(f)
+        
+        if not isinstance(config_dict, dict):
+            raise ValueError("config.json is not a valid dict!")
         
         if "model_type" not in config_dict:
             config_dict["model_type"] = "gpt2"
@@ -573,8 +566,11 @@ def ask_question():
         
         with open(config_path, "w") as f:
             json.dump(config_dict, f, indent=2)
-        
-        model = GPT2LMHeadModel.from_pretrained(  # ✅ AutoModel → 직접 명시
+
+        model_path = get_finedtuned_model_path(filename, model_choice)
+
+        # Load tokenizer and model
+        model = GPT2LMHeadModel.from_pretrained(
             model_path,
             cache_dir=HF_CACHE,
             local_files_only=True,

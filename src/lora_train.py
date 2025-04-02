@@ -61,14 +61,14 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         s3_model_path = f"models/lora_finetuned_model/{model_folder_name}"
         logger.info(f"train_lora_from: {selected_model}")
 
-        config_path = os.path.join(BASE_MODEL_DIR, "config.json")
-        with open(config_path, "r") as f:
-            config_data = json.load(f)
+        # config_path = os.path.join(BASE_MODEL_DIR, "config.json")
+        # with open(config_path, "r") as f:
+        #     config_data = json.load(f)
 
-        config_data["torch_dtype"] = "float32"
+        # config_data["torch_dtype"] = "float32"
 
-        with open(config_path, "w") as f:
-            json.dump(config_data, f, indent=2)
+        # with open(config_path, "w") as f:
+        #     json.dump(config_data, f, indent=2)
 
         # ✅ Step 1: Load tokenizer and base model from pre-downloaded path
         try:
