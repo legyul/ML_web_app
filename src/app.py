@@ -458,7 +458,7 @@ def chat_interface():
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
-    from transformers import AutoTokenizer, GPT2LMHeadModel, AutoModelForCausalLM
+    from transformers import AutoTokenizer, GPT2LMHeadModel, AutoConfig
 
     data = request.json
     print(f"ask_question: {data}")
@@ -555,11 +555,12 @@ def ask_question():
         model_path = get_finedtuned_model_path(filename, model_choice)
 
         # Load tokenizer and model
-        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
+        config = AutoConfig.from_pretrained(model_path, local_files_only=True)
 
         base_model = GPT2LMHeadModel.from_pretrained(
             model_path,
             cache_dir=HF_CACHE,
+            config=config,
             local_files_only=True,
             trust_remote_code=True,
             use_safetensors=True
@@ -568,6 +569,7 @@ def ask_question():
         model = PeftModel.from_pretrained(base_model, model_path, local_files_only=True)
         model.to("cpu")
     
+        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
         config_path = os.path.join(model_path, "config.json")
         
         config_dict = model.config.to_dict()
