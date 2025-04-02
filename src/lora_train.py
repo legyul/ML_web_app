@@ -181,9 +181,6 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         try:
             os.makedirs(SAVE_PATH, exist_ok=True)
 
-            if hasattr(model, "merge_and_unload"):
-                model = model.merge_and_unload()
-                
             model.save_pretrained(SAVE_PATH)
         except Exception as save_err:
             logger.error(f"Model saving failed: {save_err}")

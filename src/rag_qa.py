@@ -31,11 +31,18 @@ def get_qa_pipeline(filename: str, model_choice: str):
         
         config = AutoConfig.from_pretrained(model_path, local_files_only=True)
         
-        model = GPT2LMHeadModel.from_pretrained(  # ✅ AutoModel → 직접 명시
+        base_model = GPT2LMHeadModel.from_pretrained(  # ✅ AutoModel → 직접 명시
             model_path,
             cache_dir=HF_CACHE,
             local_files_only=True,
-            trust_remote_code=True
+            trust_remote_code=True,
+            use_safetensors=True
+        )
+
+        model = PeftModel.from_pretrained(
+            base_model,
+            model_path,
+            local_files_only=True
         )
         model.to("cpu")
 

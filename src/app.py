@@ -20,6 +20,7 @@ from utils.download_utils import load_model_from_s3, download_llm_model_from_s3,
 from lora_train import train_lora_from_user_data, get_finedtuned_model_path, run_train_thread
 import threading
 import json
+from peft import PeftModel
 import re
 
 # Load environment variables from .env file
@@ -563,12 +564,15 @@ def ask_question():
 
         # Load tokenizer and model
         tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
-        model = model = GPT2LMHeadModel.from_pretrained(
+        base_model = model = GPT2LMHeadModel.from_pretrained(
             model_path,
             cache_dir=HF_CACHE,
             local_files_only=True,
-            trust_remote_code=True
+            trust_remote_code=True,
+            use_safetensors=True
         )
+
+        model = PeftModel.from_pretrained(base_model, model_path, local_files_only=True)
         model.to("cpu")
     
     except Exception as e:
