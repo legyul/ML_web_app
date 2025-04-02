@@ -31,13 +31,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         if "gpt2" not in CONFIG_MAPPING:
             AutoModelForCausalLM.register("gpt2", GPT2LMHeadModel)
 
-        with open(os.path.join(model_path, "config.json"), "r") as f:
-            config_dict = json.load(f)
-        
-        config_dict["model_type"] = "gpt2"
-        config_dict["architectures"] = ["GPT2LMHeadModel"]
-        
-        config = GPT2Config.from_dict(config_dict)
+        config = GPT2Config.from_pretrained(model_path, local_files_only=True)
         
         model = GPT2LMHeadModel.from_pretrained(  # ✅ AutoModel → 직접 명시
             model_path,

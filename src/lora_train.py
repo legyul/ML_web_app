@@ -213,7 +213,7 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
 
         # ✅ Step 7: Upload to S3
         s3 = boto3.client('s3', region_name=os.getenv("AWS_REGION"), config=boto3.session.Config(signature_version='s3v4'))
-        for file in os.listdir(SAVE_PATH):
+        for file in sorted(os.listdir(SAVE_PATH)):
             local_path = os.path.join(SAVE_PATH, file)
             s3_key = f"{s3_model_path}/{file}"
             s3.upload_file(local_path, os.getenv("S3_BUCKET_NAME"), s3_key)
