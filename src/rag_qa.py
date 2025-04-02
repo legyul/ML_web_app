@@ -28,6 +28,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         HF_CACHE = "/tmp/hf_cache"
 
         print("[DEBUG] Loading tokenizer...")
+        AutoModelForCausalLM.register("gpt2", GPT2LMHeadModel)
         with open(os.path.join(model_path, "config.json"), "r") as f:
             config_dict = json.load(f)
         

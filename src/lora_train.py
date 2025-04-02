@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, GPT2LMHeadModel
 from peft import LoraConfig, get_peft_model
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -176,10 +176,10 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
             logger.info(f"Epoch {epoch+1} Finished - Loss: {total_loss:.4f}")
         
         logger.info("✅ Finished all epochs. Proceeding to save model...")
-
         # ✅ Step 5: Save
         try:
             os.makedirs(SAVE_PATH, exist_ok=True)
+            AutoModelForCausalLM.register("gpt2", GPT2LMHeadModel)
 
             model.save_pretrained(SAVE_PATH)
         except Exception as save_err:

@@ -458,7 +458,7 @@ def chat_interface():
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
-    from transformers import GPT2Config, AutoTokenizer, GPT2LMHeadModel
+    from transformers import GPT2Config, AutoTokenizer, GPT2LMHeadModel, AutoModelForCausalLM
 
     data = request.json
     print(f"ask_question: {data}")
@@ -550,6 +550,8 @@ def ask_question():
                 model_path,
                 REQUIRED_FILES
             )
+
+            AutoModelForCausalLM.register("gpt2", GPT2LMHeadModel)
 
             config_path = os.path.join(model_path, "config.json")
             with open(config_path, "r") as f:
