@@ -555,7 +555,9 @@ def ask_question():
         model_path = get_finedtuned_model_path(filename, model_choice)
 
         # Load tokenizer and model
-        model = GPT2LMHeadModel.from_pretrained(
+        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
+
+        base_model = GPT2LMHeadModel.from_pretrained(
             model_path,
             cache_dir=HF_CACHE,
             local_files_only=True,
@@ -563,7 +565,8 @@ def ask_question():
             use_safetensors=True
         )
 
-        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
+        model = PeftModel.from_pretrained(base_model, model_path, local_files_only=True)
+        model.to("cpu")
     
         config_path = os.path.join(model_path, "config.json")
         
@@ -576,7 +579,7 @@ def ask_question():
 
         with open(config_path, "w") as f:
             json.dump(config_dict, f, indent=2)
-            
+
     except Exception as e:
         print(f"Failed to load fine-tuned model: {e}")
         return jsonify({"response": f"❌ Failed to load LoRA model: {str(e)}"})
