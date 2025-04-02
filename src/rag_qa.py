@@ -28,15 +28,12 @@ def get_qa_pipeline(filename: str, model_choice: str):
         HF_CACHE = "/tmp/hf_cache"
 
         print("[DEBUG] Loading tokenizer...")
-        if "gpt2" not in CONFIG_MAPPING:
-            AutoModelForCausalLM.register("gpt2", GPT2LMHeadModel)
 
         config = GPT2Config.from_pretrained(model_path, local_files_only=True)
         
-        model = GPT2LMHeadModel.from_pretrained(  # ✅ AutoModel → 직접 명시
+        model = GPT2LMHeadModel.from_pretrained( 
             model_path,
             cache_dir=HF_CACHE,
-            config=config,
             local_files_only=True,
             trust_remote_code=True,
             use_safetensors=True

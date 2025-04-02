@@ -571,6 +571,9 @@ def ask_question():
         if "architectures" not in config_dict:
             config_dict["architectures"] = ["GPT2LMHeadModel"]
         
+        with open(config_path, "w") as f:
+            json.dump(config_dict, f, indent=2)
+        
         model = GPT2LMHeadModel.from_pretrained(  # ✅ AutoModel → 직접 명시
             model_path,
             cache_dir=HF_CACHE,

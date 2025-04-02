@@ -47,7 +47,6 @@ def get_finedtuned_model_path(upload_filename: str, selected_model: str) -> str:
 
 def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model: str):
     logger.debug("[DEBUG] Entered train_lora_from_user_data()")
-    AutoModelForCausalLM.register("gpt2", GPT2LMHeadModel)
 
     try:
         SAVE_PATH = get_finedtuned_model_path(filename, selected_model)
