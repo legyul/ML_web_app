@@ -458,7 +458,7 @@ def chat_interface():
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
-    from transformers import AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel
+    from transformers import GPT2Config, AutoTokenizer, GPT2LMHeadModel
 
     data = request.json
     print(f"ask_question: {data}")
@@ -563,17 +563,26 @@ def ask_question():
         model_path = get_finedtuned_model_path(filename, model_choice)
 
         # Load tokenizer and model
-        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
-        base_model = model = GPT2LMHeadModel.from_pretrained(
+        with open(os.path.join(model_path, "config.json"), "r") as f:
+            config_dict = json.load(f)
+        
+        if "model_type" not in config_dict:
+            config_dict["model_type"] = "gpt2"
+        if "architectures" not in config_dict:
+            config_dict["architectures"] = ["GPT2LMHeadModel"]
+        
+        config = GPT2Config.from_dict(config_dict)
+        
+        model = GPT2LMHeadModel.from_pretrained(  # ✅ AutoModel → 직접 명시
             model_path,
             cache_dir=HF_CACHE,
             local_files_only=True,
             trust_remote_code=True,
-            use_safetensors=True
+            use_safetensors=True,
+            config=config
         )
 
-        model = PeftModel.from_pretrained(base_model, model_path, local_files_only=True)
-        model.to("cpu")
+        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
     
     except Exception as e:
         print(f"Failed to load fine-tuned model: {e}")

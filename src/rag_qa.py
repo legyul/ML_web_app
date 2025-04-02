@@ -30,7 +30,13 @@ def get_qa_pipeline(filename: str, model_choice: str):
         print("[DEBUG] Loading tokenizer...")
         with open(os.path.join(model_path, "config.json"), "r") as f:
             config_dict = json.load(f)
-        config = GPT2Config(**config_dict)
+        
+        if "model_type" not in config_dict:
+            config_dict["model_type"] = "gpt2"
+        if "architectures" not in config_dict:
+            config_dict["architectures"] = ["GPT2LMHeadModel"]
+        
+        config = GPT2Config.from_dict(config_dict)
         
         model = GPT2LMHeadModel.from_pretrained(  # ✅ AutoModel → 직접 명시
             model_path,
