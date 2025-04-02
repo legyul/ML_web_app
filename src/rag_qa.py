@@ -4,7 +4,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.llms import huggingface_pipeline
 from langchain.chains import retrieval_qa
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer, GPT2LMHeadModel, CONFIG_MAPPING
+from transformers import pipeline, AutoTokenizer, GPT2LMHeadModel,TextGenerationPipeline
 from lora_train import get_finedtuned_model_path
 import json
 from peft import PeftModel, PeftConfig
@@ -45,8 +45,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         # model.config.model_type = "gpt2"
         # model.to("cpu")
 
-        llm_pipeline = pipeline(
-            "text-generation",
+        llm_pipeline = TextGenerationPipeline(
             model=model,
             tokenizer=tokenizer,
             max_new_tokens=200,
