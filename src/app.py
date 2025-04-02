@@ -484,11 +484,11 @@ def ask_question():
     # Performing classification model prediction
     prediction = None
     model = None
-    model_s3_key = f"result/{filename}_model_and_info.zip" if task == "classification" else None
-    model_name = f"{filename}_model.pkl"
 
     if task == "classification" and input_data:
         try:
+            model_s3_key = f"result/{filename}_model_and_info.zip"
+            model_name = f"{filename}_model.pkl"
             model_clf = load_model_from_s3(model_s3_key, model_filename=model_name)
 
             if model_clf:
@@ -526,78 +526,10 @@ def ask_question():
             print(f"Classification prediction error: {e}")
             context += f"\n❌ Prediction error: {str(e)}"
         
-    # Auto-load LoRA model (first try fine-tuned model)
     try:
-        LORA_MODEL_S3_KEY = "models/lora_finetuned"
-        HF_CACHE = "/tmp/hf_cache"
-
-        REQUIRED_FILES = [
-            "config.json",
-            "tokenizer_config.json",
-            "tokenizer.json",
-            "tokenizer.model",
-            "special_tokens_map.json",
-            "generation_config.json",
-            "model.safetensors"
-        ]
-
-        if not os.path.exists(model_path):
-            print("Downloading fine-tuned LoRA model from S3...")
-            download_llm_model_from_s3(
-                S3_REGION,
-                S3_BUCKET_NAME,
-                LORA_MODEL_S3_KEY,
-                model_path,
-                REQUIRED_FILES
-            )
-
-
-        model_path = get_finedtuned_model_path(filename, model_choice)
-
-        # Load tokenizer and model
-        config = AutoConfig.from_pretrained(model_path, local_files_only=True)
-
-        base_model = GPT2LMHeadModel.from_pretrained(
-            model_path,
-            cache_dir=HF_CACHE,
-            config=config,
-            local_files_only=True,
-            trust_remote_code=True,
-            use_safetensors=True
-        )
-
-        model = PeftModel.from_pretrained(base_model, model_path, local_files_only=True)
-        model.to("cpu")
-    
-        tokenizer = AutoTokenizer.from_pretrained(model_path, cache_dir=HF_CACHE, use_fast=False)
-        config_path = os.path.join(model_path, "config.json")
-        
-        config_dict = model.config.to_dict()
-        config_dict.update({
-            "model_type": "gpt2",
-            "architectures": ["GPT2LMHeadModel"],
-            "torch_dtype": "float32"
-        })
-
-        with open(config_path, "w") as f:
-            json.dump(config_dict, f, indent=2)
-
-    except Exception as e:
-        print(f"Failed to load fine-tuned model: {e}")
-        return jsonify({"response": f"❌ Failed to load LoRA model: {str(e)}"})
-    
-    # LoRA-based generative response
-    try:
-        full_input = f"{context}\n\nQuestion: {question}"
-        inputs = tokenizer(full_input, return_tensors="pt").to("cpu")
-
-        with torch.no_grad():
-            output = model.generate(**inputs, max_length=200)
-        
-        response_text = tokenizer.decode(output[0], skip_special_tokens=True)
 
         return jsonify({
-            "response": response_text,
+            "response": context,
             "prediction": prediction
         })
     
