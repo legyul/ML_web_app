@@ -527,7 +527,11 @@ def ask_question():
             context += f"\n❌ Prediction error: {str(e)}"
         
     try:
-
+        from rag_qa import get_qa_pipeline
+        qa = get_qa_pipeline(filename, model_choice)
+        if qa is None:
+            print("[ERROR] QA pipeline is None. Aborting.")
+            return jsonify({"response": "QA pipeline is None."})
         return jsonify({
             "response": context,
             "prediction": prediction

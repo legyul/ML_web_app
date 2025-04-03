@@ -67,6 +67,8 @@ def get_qa_pipeline(filename: str, model_choice: str):
 
     except Exception as e:
         print(f"❌ Failed to load QA pipeline: {e}")
+        import traceback
+        traceback.print_exc()
         return None
     
 def run_qa(query: str, filename: str, model_choice: str) -> str:
@@ -75,4 +77,5 @@ def run_qa(query: str, filename: str, model_choice: str) -> str:
     """
     qa = get_qa_pipeline(filename, model_choice)
     response = qa.run(query)
+        
     return response
