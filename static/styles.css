@@ -1,7 +1,9 @@
 html, body {
-    height: 100%;
+    height: auto;
     margin: 0;
     padding: 0;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
 body {
@@ -185,13 +187,12 @@ pre {
     background: #f7f7f7;
     border-radius: 10px;
     padding: 20px;
-    height: 400;
-    max-height: 60vh;
-    min-height: 150px;
+    height: 400px;
     overflow-y: auto;
     margin-bottom: 1rem;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
     scroll-behavior: smooth;
+    padding-bottom: 80px;
 }
 
 .message {
@@ -224,7 +225,7 @@ pre {
     gap: 10px;
     margin-top: auto;
     align-items: center;
-    position: sticky;
+    position: fixed;
     bottom: 0;
     background-color: #fff;
     padding: 10px 0;
