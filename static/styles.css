@@ -2,15 +2,12 @@ html, body {
     height: auto;
     margin: 0;
     padding: 0;
-    overflow-y: auto;
     box-sizing: border-box;
+    overflow-y: auto;
+    background-color: #fdfdfd;
+    font-family: sans-serif;
 }
 
-body {
-    text-align: center; /* Center align the content */
-    font-family: sans-serif;
-    background-color: #fdfdfd;
-}
 h1 {
     margin-top: 50px; /* Add some space from the top */
 }
@@ -180,19 +177,19 @@ pre {
     justify-content: space-between;
     box-sizing: border-box;
     min-height: 100vh;
+    padding-bottom: 140px;
 }
 
 .chat-box {
-    flex: 1;
+    flex: 0 1 60 vh;
     background: #f7f7f7;
     border-radius: 10px;
     padding: 20px;
-    height: 400px;
+    min-height: 150px;
     overflow-y: auto;
     margin-bottom: 1rem;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
     scroll-behavior: smooth;
-    padding-bottom: 80px;
 }
 
 .message {
@@ -220,15 +217,18 @@ pre {
 }
 
 .input-row {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #fff;
+    padding: 15px 20px;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
     display: flex;
     justify-content: center;
     gap: 10px;
-    margin-top: auto;
     align-items: center;
-    position: fixed;
-    bottom: 0;
-    background-color: #fff;
-    padding: 10px 0;
+    z-index: 1000;
 }
 
 .input-row input {
@@ -264,20 +264,22 @@ pre {
 @media (max-width: 768px) {
     .chat-container {
       padding: 10px;
+      padding-bottom: 140px;
     }
   
     .chat-box {
       padding: 10px;
-      max-height: 50vh;
     }
   
     .input-row {
       flex-direction: column;
+      align-items: stretch;
       gap: 8px;
     }
   
     .input-row input,
     .input-row button {
       width: 100%;
+      font-size: 18px
     }
   }
