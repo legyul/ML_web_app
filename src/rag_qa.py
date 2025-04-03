@@ -9,6 +9,7 @@ from lora_train import get_finedtuned_model_path
 import json
 from peft import PeftModel, PeftConfig
 from pathlib import Path
+import re
 
 load_dotenv()
 # Lazy-load cache
@@ -54,7 +55,12 @@ def get_qa_pipeline(filename: str, model_choice: str):
             def __call__(self, prompt, **kwargs):
                 outputs = self.pipeline(prompt, return_full_text=True, clean_up_tokenization_spaces=True, **kwargs)
                 if isinstance(outputs, list) and "generated_text" in outputs[0]:
-                    return outputs[0]["generated_text"]
+                    text = outputs[0]["generated_text"]
+                    text = text.replace("  ", " ").replace("\n", "\n\n")
+
+                    text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text)
+                    text = re.sub(r"(?<=[a-zA-Z])(?=[0-9])", " ", text)
+                    return text
                 return outputs
 
         llm_pipeline = TextGenerationPipeline(
@@ -65,7 +71,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
             temperature=0.7,
             top_p=0.95,
             clean_up_tokenization_spaces=True,
-            return_full_text=True
+            return_full_text=False
         )
 
         wrapped_pipeline = SimpleTextGenWrapper(llm_pipeline)
@@ -102,12 +108,22 @@ def run_qa(query: str, filename: str, model_choice: str) -> str:
     if isinstance(response, list):
         try:
             # Extract text from list format returned by huggingface pipeline
-            return response[0]["generated_text"]
+            response_text = response[0].get("generated_text", str(response[0]))
+            
         except (KeyError, TypeError):
             return str(response[0])
     
     # Huggingface pipeline is just returned to the string
     elif isinstance(response, str):
-        return response.strip()
+        response_text = response.strip()
+    
+    else:
+        response_text = str(response)
+    
+    response_text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", response_text)
+    response_text = re.sub(r"(?<=[a-zA-Z])(?=[0-9])", " ", response_text)
+    response_text = re.sub(r"([a-z])([A-Z])", r"\1 \2", response_text)
+    response_text = response_text.replace("  ", " ")
+    response_text = re.sub(r"\n+", "\n\n", response_text)
         
-    return str(response)
+    return response_text.strip()
