@@ -25,10 +25,9 @@
     </div>
 
     <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        const task = urlParams.get("task") || "unknown";
-        const filename = urlParams.get("filename") || "unknown";
-        const model_choice = urlParams.get("model_choice") || "unknown";
+        const task = "{{ task }}";
+        const filename = "{{ filename }}";
+        const model_choice = "{{ model_choice }}";
 
         document.getElementById("task-info").innerText = `🔧 Task: ${task} | 📁 Dataset: ${filename}`;
 
