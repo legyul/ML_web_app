@@ -63,7 +63,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         _qa_pipeline[key] = RetrievalQA.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
 
         print("✅ QA Pipeline loaded successfully.")
-        return _qa_pipeline
+        return _qa_pipeline[key]
 
     except Exception as e:
         print(f"❌ Failed to load QA pipeline: {e}")
