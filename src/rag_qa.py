@@ -49,6 +49,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
             def __init__(self, pipeline):
                 self.pipeline = pipeline
                 self.model = pipeline.model
+                self.task = pipeline.task or "text-generation"
             
             def __call__(self, prompt, **kwargs):
                 outputs = self.pipeline(prompt, **kwargs)
