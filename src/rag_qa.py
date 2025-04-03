@@ -48,6 +48,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         class SimpleTextGenWrapper:
             def __init__(self, pipeline):
                 self.pipeline = pipeline
+                self.model = pipeline.model
             
             def __call__(self, prompt, **kwargs):
                 outputs = self.pipeline(prompt, **kwargs)
