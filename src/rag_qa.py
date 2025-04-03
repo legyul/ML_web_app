@@ -27,6 +27,9 @@ def get_qa_pipeline(filename: str, model_choice: str):
         model_path = get_finedtuned_model_path(filename, model_choice)
         tokenizer_path = os.path.join(model_path, "_tokenizer")
         
+        if not os.path.isdir(model_path):
+            raise ValueError(f"Model path {model_path} is not a directory. Cannot load locally.")
+        
         HF_CACHE = "/tmp/hf_cache"
 
         print("[DEBUG] Loading tokenizer...")
