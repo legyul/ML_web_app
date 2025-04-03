@@ -26,6 +26,8 @@ def get_qa_pipeline(filename: str, model_choice: str):
 
         model_path = get_finedtuned_model_path(filename, model_choice)
         tokenizer_path = os.path.join(model_path, "_tokenizer")
+        config_path = os.path.join(model_path, "config.json")
+        config = GPT2Config.from_json_file(config_path)
         
         HF_CACHE = "/tmp/hf_cache"
 
@@ -33,6 +35,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         
         model = GPT2LMHeadModel.from_pretrained( 
             pretrained_model_name_or_path=model_path,
+            config=config,
             cache_dir=HF_CACHE,
             local_files_only=True,
             trust_remote_code=True,
@@ -41,11 +44,6 @@ def get_qa_pipeline(filename: str, model_choice: str):
         model.to("cpu")
 
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
-        
-        # Attach LoRA adapter
-        # model = PeftModel.from_pretrained(base_model, model_path, local_files_only=True)
-        # model.config.model_type = "gpt2"
-        # model.to("cpu")
 
         llm_pipeline = TextGenerationPipeline(
             model=model,
