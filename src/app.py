@@ -452,14 +452,16 @@ def generate_presigned_url(bucket_name, s3_key, expiration=36000):
 #------------------LLM-----------------------
 @app.route('/chat')
 def chat_interface():
-    task = request.args.get("task", "unknown")
-    filename = request.args.get("filename", "unknown")
+    from lora_train import sanitize_model_name
+    task = session.get("task", "unknown")
+    filename = session.get("filename", "unknown")
     model_choice = session.get("model_choice", "unknown")
-    return render_template("chat.html", task=task, filename=current_filename, model_choice=model_choice)
+    model_choice = sanitize_model_name(model_choice)
+    return render_template("chat.html", task=task, filename=filename, model_choice=model_choice)
 
 @app.route('/check_lora_ready', methods=['GET'])
 def check_lora_ready():
-    filename = request.args.get("filename")
+    filename = session.get("filename")
     model_choice = session.get("model_choice")
 
     model_path = get_finedtuned_model_path(filename, model_choice)
