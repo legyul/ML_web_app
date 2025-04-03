@@ -90,6 +90,22 @@ def run_qa(query: str, filename: str, model_choice: str) -> str:
     Create a RAG QA response to a user's question
     """
     qa = get_qa_pipeline(filename, model_choice)
+
+    if qa is None:
+        return "QA pipeline is not ready"
+    
     response = qa.run(query)
+
+    # Respond if LangChain returns to list
+    if isinstance(response, list):
+        try:
+            # Extract text from list format returned by huggingface pipeline
+            return response[0]["generated_text"]
+        except (KeyError, TypeError):
+            return str(response[0])
+    
+    # Huggingface pipeline is just returned to the string
+    elif isinstance(response, str):
+        return response.strip()
         
-    return response
+    return str(response)

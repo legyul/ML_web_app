@@ -11,6 +11,10 @@
         <h1>Ask to AI</h1>
         <p id="task-info"></p>
 
+        <p id="model-status" style="color: gray; font-style: italic; margin-bottom: 10px;">
+            🔄 Model is loading...
+        </p>
+
         <div class="chat-box" id="chat-box"></div>
         <div id="spinner">✨ Generating response...</div>
 
@@ -35,13 +39,14 @@
         const spinner = document.getElementById("spinner");
         const questionInput = document.getElementById("question");
         const submitBtn = document.getElementById("submit-btn");
+        const statusText = document.getElementById("model-status");
 
         async function waitUntilModelReady(filename, model_choice) {
             const checkUrl = `/check_lora_ready?filename=${filename}&model_choice=${model_choice}`;
             console.log("🔍 filename:", filename);
             console.log("🔍 model_choice:", model_choice);
 
-            for (let i = 0; i < 30; i++) { // 최대 30초까지 대기
+            for (let i = 0; i < 30; i++) {
                 const res = await fetch(checkUrl);
                 const data = await res.json();
 
@@ -49,13 +54,16 @@
                     console.log("✅ Model is ready.");
                     questionInput.disabled = false;
                     submitBtn.disabled = false;
+                    statusText.innerText = "✅ Model is ready! Ask your question.";
                     return;
                 }
 
                 console.log("⏳ Waiting for model to be ready...");
+                statusText.innerText = `⏳ Waiting for model to be ready... (${i + 1}s)`;
                 await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
+            statusText.innerText = "❌ Model is not ready yet. Please try again later.";
             addMessageToChat("bot", "❌ Model is not ready yet. Please try again later.");
         }
 
@@ -71,7 +79,6 @@
             
             const question = questionInput.value.trim();
             
-
             if (!question) return alert("Please enter a question.");
 
             addMessageToChat("user", question);

@@ -16,7 +16,25 @@ def df_to_docs(df: pd.DataFrame) -> list[Document]:
     Converting row including numeric, categorical, and date types into natural language text
     """
     docs = []
-    for i, row in df.iterrows():
+
+    # Add dataset-level summary at the beginning
+    summary_parts = [
+        "This dataset appears to contain structured information.",
+        f"It has {df.shape[0]} rows and {df.shape[1]} columns.",
+        "Here are the columns: " + ", ".join(df.columns)
+    ]
+
+    # Add sample row preview
+    try:
+        preview = df.head(2).to_string(index=False)
+        summary_parts.append(f"Here are a few sample rows:\n{preview}")
+    except:
+        pass
+
+    summary_text = "\n".join(summary_parts)
+    docs.append(Document(page_content=summary_text))
+
+    for _, row in df.iterrows():
         # Converting column names and their values to natural language text
         content = "\n".join([f"{col}: {row[col]}" for col in df.columns])
         docs.append(Document(page_content=content))
