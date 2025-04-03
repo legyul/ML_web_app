@@ -178,7 +178,7 @@ pre {
     background: #f7f7f7;
     border-radius: 10px;
     padding: 20px;
-    min-height: 400px;
+    height: 400px;
     overflow-y: auto;
     margin-bottom: 1rem;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
@@ -215,6 +215,7 @@ pre {
     display: flex;
     justify-content: center;
     gap: 10px;
+    margin-bottom: 80px;
 }
 
 .input-row input {

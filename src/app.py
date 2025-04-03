@@ -453,7 +453,7 @@ def generate_presigned_url(bucket_name, s3_key, expiration=36000):
 @app.route('/chat')
 def chat_interface():
     from lora_train import sanitize_model_name
-    task = session.get("task", "unknown")
+    task = request.args.get("task", "unknown")
     filename = session.get("filename", "unknown")
     model_choice = session.get("model_choice", "unknown")
     model_choice = sanitize_model_name(model_choice)
