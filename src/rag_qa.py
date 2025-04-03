@@ -45,6 +45,16 @@ def get_qa_pipeline(filename: str, model_choice: str):
 
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
 
+        class SimpleTextGenWrapper:
+            def __init__(self, pipeline):
+                self.pipeline = pipeline
+            
+            def __call__(self, prompt, **kwargs):
+                outputs = self.pipeline(prompt, **kwargs)
+                if isinstance(outputs, list) and "generated_text" in outputs[0]:
+                    return outputs[0]["generated_text"]
+                return outputs
+
         llm_pipeline = TextGenerationPipeline(
             model=model,
             tokenizer=tokenizer,
@@ -54,12 +64,14 @@ def get_qa_pipeline(filename: str, model_choice: str):
             top_p=0.95
         )
 
+        wrapped_pipeline = SimpleTextGenWrapper(llm_pipeline)
+
         EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
         CHROMA_PATH = os.getenv("CHROMA_PATH", "./chroma_db")
         embedding_function = HuggingFaceEmbeddings(model_name=EMBED_MODEL_NAME)
         vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
-        llm = HuggingFacePipeline(pipeline=llm_pipeline)
+        llm = HuggingFacePipeline(pipeline=wrapped_pipeline)
         _qa_pipeline[key] = RetrievalQA.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
 
         print("✅ QA Pipeline loaded successfully.")
