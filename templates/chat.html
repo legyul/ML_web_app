@@ -15,8 +15,8 @@
         <div id="spinner">✨ Generating response...</div>
 
         <div class="input-row">
-            <input type="text" id="question" placeholder="Enter your question" onkeypress="handleKeyPress(event)" />
-            <button id="submit-btn" onclick="askQuestion()">Send</button>
+            <input type="text" id="question" placeholder="Enter your question" onkeypress="handleKeyPress(event)" disabled />
+            <button id="submit-btn" onclick="askQuestion()" disabled>Send</button>
         </div>
     </div>
 
@@ -28,20 +28,48 @@
         const urlParams = new URLSearchParams(window.location.search);
         const task = urlParams.get("task") || "unknown";
         const filename = urlParams.get("filename") || "unknown";
+        const model_choice = urlParams.get("model_choice") || "unknown";
 
         document.getElementById("task-info").innerText = `🔧 Task: ${task} | 📁 Dataset: ${filename}`;
 
         const chatBox = document.getElementById("chat-box");
         const spinner = document.getElementById("spinner");
+        const questionInput = document.getElementById("question");
+        const submitBtn = document.getElementById("submit-btn");
+
+        async function waitUntilModelReady(filename, model_choice) {
+            const checkUrl = `/check_lora_ready?filename=${filename}&model_choice=${model_choice}`;
+
+            for (let i = 0; i < 30; i++) { // 최대 30초까지 대기
+                const res = await fetch(checkUrl);
+                const data = await res.json();
+
+                if (data.ready) {
+                    console.log("✅ Model is ready.");
+                    questionInput.disabled = false;
+                    submitBtn.disabled = false;
+                    return;
+                }
+
+                console.log("⏳ Waiting for model to be ready...");
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            addMessageToChat("bot", "❌ Model is not ready yet. Please try again later.");
+        }
+
+        window.onload = function () {
+            waitUntilModelReady(filename, model_choice);
+        };
 
         function handleKeyPress(event) {
             if (event.key === "Enter") askQuestion();
         }
 
         async function askQuestion() {
-            const questionInput = document.getElementById("question");
+            
             const question = questionInput.value.trim();
-            const submitBtn = document.getElementById("submit-btn");
+            
 
             if (!question) return alert("Please enter a question.");
 
@@ -55,7 +83,7 @@
                 const res = await fetch("/ask", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ task, filename, question })
+                    body: JSON.stringify({ task, filename, question, model_choice })
                 });
 
                 const result = await res.json();

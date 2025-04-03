@@ -39,8 +39,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
             cache_dir=HF_CACHE,
             local_files_only=True,
             trust_remote_code=True,
-            use_safetensors=True,
-            use_auth_token=False
+            use_safetensors=True
         )
         model.to("cpu")
 
@@ -61,7 +60,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
         llm = huggingface_pipeline(pipeline=llm_pipeline)
-        _qa_pipeline = retrieval_qa.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
+        _qa_pipeline[key] = retrieval_qa.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
 
         print("✅ QA Pipeline loaded successfully.")
         return _qa_pipeline

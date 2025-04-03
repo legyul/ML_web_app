@@ -456,6 +456,20 @@ def chat_interface():
     #filename = request.args.get("filename", "unknown")
     return render_template("chat.html", task=task, filename=current_filename)
 
+@app.route('/check_lora_ready', methods=['GET'])
+def check_lora_ready():
+    filename = request.args.get("filename")
+    model_choice = request.args.get("model_choice")
+
+    model_path = get_finedtuned_model_path(filename, model_choice)
+    config_path = os.path.join(model_path, "config.json")
+    model_file = os.path.join(model_path, "model.safetensors")
+
+    if os.path.isdir(model_path) and os.path.exists(config_path) and os.path.exists(model_file):
+        return jsonify({"ready": True})
+    else:
+        return jsonify({"ready": False})
+
 @app.route('/ask', methods=['POST'])
 def ask_question():
     from transformers import AutoTokenizer, GPT2LMHeadModel, AutoConfig
