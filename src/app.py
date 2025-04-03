@@ -514,15 +514,23 @@ def ask_question():
                 IGNORE_COLUMNS = ["ID", "Timestamp", "target", "label"]
                 feature_columns = [col for col in df_uploaded.columns if col not in IGNORE_COLUMNS]
 
+                input_values = None
+
                 # ✅ Step 1: Processing User Input Values
                 if input_data:
                     input_values = input_data
-                else:
+
+                elif question_contains_numbers(question):
                     extracted = extract_numbers_from_text(question)
                     if len(extracted) == len(feature_columns):
                         input_values = extracted
-                    else:
+                
+                if input_values is None:
+                    try:
                         input_values = extract_values_from_natural_input(question, expected_len=len(feature_columns))
+                    except ValueError as e:
+                        print("Failed to extract values from question:", e)
+                        input_values = None
 
                 # ✅ Step 2: Convert DataFrame
                 if isinstance(input_values, list):
@@ -533,7 +541,11 @@ def ask_question():
                     raise ValueError("The input format is not a list or dictionary.")
 
                 for col in df_input.columns:
-                    df_input[col] = pd.to_numeric(df_input[col], errors="ignore")
+                    originam_dtype = df_uploaded[ol].dtype
+                    try:
+                        df_input[col] = pd.to_numeric(df_input[col], errors="ignore")
+                    except Exception:
+                        pass
 
                 # ✅ Step 3: Prediction
                 prediction = model_clf.predict(df_input)[0]
@@ -573,6 +585,8 @@ def extract_values_from_natural_input(text, expected_len):
     
     return parts
 
+def question_contains_numbers(question: str) -> bool:
+    return bool(re.search(r'\d+(?:\.\d+)?', question))
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -10,11 +10,11 @@ import json
 from peft import PeftModel, PeftConfig
 from pathlib import Path
 import re
+import unicodedata
 
 load_dotenv()
 # Lazy-load cache
 _qa_pipeline = {}
-
 
 def get_qa_pipeline(filename: str, model_choice: str):
     global _qa_pipeline
@@ -54,13 +54,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
             
             def __call__(self, prompt, **kwargs):
                 outputs = self.pipeline(prompt, return_full_text=True, clean_up_tokenization_spaces=True, **kwargs)
-                if isinstance(outputs, list) and "generated_text" in outputs[0]:
-                    text = outputs[0]["generated_text"]
-                    text = text.replace("  ", " ").replace("\n", "\n\n")
-
-                    text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text)
-                    text = re.sub(r"(?<=[a-zA-Z])(?=[0-9])", " ", text)
-                    return text
+                
                 return outputs
 
         llm_pipeline = TextGenerationPipeline(
@@ -71,7 +65,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
             temperature=0.7,
             top_p=0.95,
             clean_up_tokenization_spaces=True,
-            return_full_text=False
+            return_full_text=True
         )
 
         wrapped_pipeline = SimpleTextGenWrapper(llm_pipeline)
@@ -92,6 +86,24 @@ def get_qa_pipeline(filename: str, model_choice: str):
         import traceback
         traceback.print_exc()
         return None
+    
+def clean_response(text: str) -> str:
+    # Normalize unicode
+    text = unicodedata.normalize("NFKC", text)
+
+    # Collapse repeated phrases
+    text = re.sub(r'\b(\w{3,20})( \1\b)+', r'\1', text)
+
+    # Add space between lowercase-uppercase or letter-digit
+    text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", text)
+    text = re.sub(r"(?<=[a-zA-Z])(?=[0-9])", " ", text)
+    text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
+
+    # Collapse multiple spaces and line breaks
+    text = re.sub(r" +", " ", text)
+    text = re.sub(r"\n{2,}", "\n\n", text)
+
+    return text.strip()
     
 def run_qa(query: str, filename: str, model_choice: str) -> str:
     """
@@ -119,11 +131,5 @@ def run_qa(query: str, filename: str, model_choice: str) -> str:
     
     else:
         response_text = str(response)
-    
-    response_text = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", response_text)
-    response_text = re.sub(r"(?<=[a-zA-Z])(?=[0-9])", " ", response_text)
-    response_text = re.sub(r"([a-z])([A-Z])", r"\1 \2", response_text)
-    response_text = response_text.replace("  ", " ")
-    response_text = re.sub(r"\n+", "\n\n", response_text)
         
-    return response_text.strip()
+    return clean_response(response_text)
