@@ -77,6 +77,7 @@ ENV TMPDIR=/var/tmp
 RUN python -m pip install --no-cache-dir numpy pandas scikit-learn matplotlib seaborn && \
     python -m pip install --no-cache-dir pyspark nltk peft transformers datasets accelerate einops langchain langchain-huggingface langchain-community && \
     python -m pip install --no-cache-dir gunicorn && \
+    python -m pip install --no-cache-dir -U langchain-chroma langchain-huggingface && \
     rm -rf /root/.cache/pip
 
 RUN yum install -y procps && yum clean all

@@ -1,9 +1,9 @@
 import os
 from dotenv import load_dotenv
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
-from langchain.chains import retrieval_qa
+from langchain_huggingface import HuggingFacePipeline
+from langchain.chains import RetrievalQA
 from transformers import pipeline, AutoTokenizer, GPT2LMHeadModel,TextGenerationPipeline, GPT2Config
 from lora_train import get_finedtuned_model_path
 import json
@@ -60,7 +60,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
         llm = HuggingFacePipeline(pipeline=llm_pipeline)
-        _qa_pipeline[key] = retrieval_qa.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
+        _qa_pipeline[key] = RetrievalQA.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
 
         print("✅ QA Pipeline loaded successfully.")
         return _qa_pipeline
