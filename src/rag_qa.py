@@ -52,7 +52,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
                 self.task = pipeline.task or "text-generation"
             
             def __call__(self, prompt, **kwargs):
-                outputs = self.pipeline(prompt, **kwargs)
+                outputs = self.pipeline(prompt, return_full_text=True, clean_up_tokenization_spaces=True, **kwargs)
                 if isinstance(outputs, list) and "generated_text" in outputs[0]:
                     return outputs[0]["generated_text"]
                 return outputs
@@ -63,7 +63,9 @@ def get_qa_pipeline(filename: str, model_choice: str):
             max_new_tokens=200,
             do_sample=True,
             temperature=0.7,
-            top_p=0.95
+            top_p=0.95,
+            clean_up_tokenization_spaces=True,
+            return_full_text=True
         )
 
         wrapped_pipeline = SimpleTextGenWrapper(llm_pipeline)
