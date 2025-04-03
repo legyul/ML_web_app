@@ -39,6 +39,8 @@
 
         async function waitUntilModelReady(filename, model_choice) {
             const checkUrl = `/check_lora_ready?filename=${filename}&model_choice=${model_choice}`;
+            console.log("🔍 filename:", filename);
+            console.log("🔍 model_choice:", model_choice);
 
             for (let i = 0; i < 30; i++) { // 최대 30초까지 대기
                 const res = await fetch(checkUrl);

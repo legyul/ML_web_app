@@ -453,8 +453,9 @@ def generate_presigned_url(bucket_name, s3_key, expiration=36000):
 @app.route('/chat')
 def chat_interface():
     task = request.args.get("task", "unknown")
-    #filename = request.args.get("filename", "unknown")
-    return render_template("chat.html", task=task, filename=current_filename)
+    filename = request.args.get("filename", "unknown")
+    model_choice = request.args.get("model_choice", "unknown")
+    return render_template("chat.html", task=task, filename=current_filename, model_choice=model_choice)
 
 @app.route('/check_lora_ready', methods=['GET'])
 def check_lora_ready():
