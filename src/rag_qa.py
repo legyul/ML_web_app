@@ -4,7 +4,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.llms import huggingface_pipeline
 from langchain.chains import retrieval_qa
-from transformers import pipeline, AutoTokenizer, GPT2LMHeadModel,TextGenerationPipeline
+from transformers import pipeline, AutoTokenizer, GPT2LMHeadModel,TextGenerationPipeline, GPT2Config
 from lora_train import get_finedtuned_model_path
 import json
 from peft import PeftModel, PeftConfig
@@ -12,12 +12,14 @@ from pathlib import Path
 
 load_dotenv()
 # Lazy-load cache
-_qa_pipeline = None
+_qa_pipeline = {}
+
 
 def get_qa_pipeline(filename: str, model_choice: str):
     global _qa_pipeline
-    if _qa_pipeline is not None:
-        return _qa_pipeline
+    key = f"{filename}_{model_choice}"
+    if key in _qa_pipeline:
+        return _qa_pipeline[key]
 
     try:
         print("[DEBUG] Loading RAG pipeline")
@@ -30,7 +32,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         print("[DEBUG] Loading tokenizer...")
         
         model = GPT2LMHeadModel.from_pretrained( 
-            model_path,
+            pretrained_model_name_or_path=model_path,
             cache_dir=HF_CACHE,
             local_files_only=True,
             trust_remote_code=True,
