@@ -32,3 +32,4 @@ sentencepiece
 huggingface_hub
 
 hf_xet
+wordninja
