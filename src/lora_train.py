@@ -191,7 +191,8 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         config_dict.update({
             "model_type": "gpt2",
             "architectures": ["GPT2LMHeadModel"],
-            "torch_dtype": "float32"
+            "torch_dtype": "float32",
+            "task": "text-generation"
         })
 
         with open(config_path, "w") as f:

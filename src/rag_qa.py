@@ -9,9 +9,7 @@ from langchain.schema.output_parser import StrOutputParser
 from langchain_core.runnables import RunnableLambda
 from transformers import pipeline, AutoTokenizer, GPT2LMHeadModel,TextGenerationPipeline, GPT2Config
 from lora_train import get_finedtuned_model_path
-import json
-from peft import PeftModel, PeftConfig
-from pathlib import Path
+import wordninja
 import re
 import unicodedata
 
@@ -63,7 +61,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         )
         model.to("cpu")
 
-        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, cache_dir=HF_CACHE, use_fast=False, local_files_only=True, add_prefix_space=True)
 
         llm_pipeline = TextGenerationPipeline(
             model=model,
@@ -85,13 +83,20 @@ def get_qa_pipeline(filename: str, model_choice: str):
         vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
         def extract_text(output):
-            if isinstance(output, list) and len(output) > 0:
-                return output[0].get("generated_text", str(output[0]))
-            elif isinstance(output, str):
-                return output
-            elif isinstance(output, dict) and "generated_text" in output:
-                return output["generated_text"]
-            return str(output)
+            try:
+                if isinstance(output, list) and len(output) > 0:
+                    if isinstance(output[0], dict) and "generated_text" in output[0]:
+                        return output[0]["generated_text"]
+                    else:
+                        return str(output[0])
+                elif isinstance(output, dict):
+                    return output.get("generated_text", str(output))
+                elif isinstance(output, str):
+                    return output
+                return str(output)
+            except Exception as e:
+                print(f"[extract_text ERROR] {e}")
+                return f"RAG post-processing error: {e}"
 
         chain = prompt | llm | RunnableLambda(extract_text)
         _qa_pipeline[key] = (chain, vectordb)
@@ -120,6 +125,8 @@ def clean_response(text: str) -> str:
     # Collapse multiple spaces and line breaks
     text = re.sub(r" +", " ", text)
     text = re.sub(r"\n{2,}", "\n\n", text)
+
+    text = " ".join(wordninja.split(text))
 
     return text.strip()
     
