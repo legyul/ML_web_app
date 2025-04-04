@@ -6,7 +6,8 @@ from langchain_huggingface import HuggingFacePipeline
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.schema.output_parser import StrOutputParser
-from langchain_core.runnables import RunnableLambda
+from langchain_core.runnables import RunnableLambda, RunnableMap
+from langchain_core.output_parsers import StrOutputParser
 from transformers import pipeline, AutoTokenizer, GPT2LMHeadModel,TextGenerationPipeline, GPT2Config
 from lora_train import get_finedtuned_model_path
 import wordninja
@@ -98,7 +99,11 @@ def get_qa_pipeline(filename: str, model_choice: str):
                 print(f"[extract_text ERROR] {e}")
                 return f"RAG post-processing error: {e}"
 
-        chain = prompt | llm | RunnableLambda(extract_text)
+        chain = RunnableMap({
+            "context": lambda x: x["context"],
+            "question": lambda x: x["question"]
+        }) | prompt | llm | RunnableLambda(lambda x: x[0] if isinstance(x, list) else x) | StrOutputParser()
+        
         _qa_pipeline[key] = (chain, vectordb)
 
         print("✅ QA Pipeline loaded successfully.")
@@ -127,6 +132,7 @@ def clean_response(text: str) -> str:
     text = re.sub(r"\n{2,}", "\n\n", text)
 
     text = " ".join(wordninja.split(text))
+    print(f"\n\n{text.strip()}")
 
     return text.strip()
     

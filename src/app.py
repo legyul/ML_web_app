@@ -537,7 +537,7 @@ def ask_question():
     else:
         try:
             rag_response = run_qa(question, filename, model_choice)
-            context = f"RAG response: {rag_response}"
+            context = f"{rag_response}"
         except Exception as e:
                 context = f"RAG error: {str(e)}"
     
