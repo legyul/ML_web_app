@@ -74,7 +74,9 @@ def get_qa_pipeline(filename: str, model_choice: str):
             return_full_text=True
         )
 
-        llm = HuggingFacePipeline(pipeline=llm_pipeline)
+        llm = HuggingFacePipeline(pipeline=llm_pipeline,
+                                  model_id=model_path,
+                                  task="text-generation")
 
         EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
         CHROMA_PATH = os.getenv("CHROMA_PATH", "./chroma_db")
