@@ -3,7 +3,8 @@ from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_huggingface import HuggingFacePipeline
-from langchain.chains import RetrievalQA
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
 from transformers import pipeline, AutoTokenizer, GPT2LMHeadModel,TextGenerationPipeline, GPT2Config
 from lora_train import get_finedtuned_model_path
 import json
@@ -15,6 +16,22 @@ import unicodedata
 load_dotenv()
 # Lazy-load cache
 _qa_pipeline = {}
+
+CUSTOM_TEMPLATE = """You are a helpful AI assistant. Use the context below to answer the user's question.
+
+Context:
+{context}
+
+Question:
+{question}
+
+Answer:"""
+
+prompt = PromptTemplate(
+    input_variables=["context", "question"],
+    template=CUSTOM_TEMPLATE
+)
+
 
 def get_qa_pipeline(filename: str, model_choice: str):
     global _qa_pipeline
@@ -46,17 +63,6 @@ def get_qa_pipeline(filename: str, model_choice: str):
 
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, cache_dir=HF_CACHE, use_fast=False, local_files_only=True)
 
-        class SimpleTextGenWrapper:
-            def __init__(self, pipeline):
-                self.pipeline = pipeline
-                self.model = pipeline.model
-                self.task = pipeline.task or "text-generation"
-            
-            def __call__(self, prompt, **kwargs):
-                outputs = self.pipeline(prompt, return_full_text=True, clean_up_tokenization_spaces=True, **kwargs)
-                
-                return outputs
-
         llm_pipeline = TextGenerationPipeline(
             model=model,
             tokenizer=tokenizer,
@@ -68,15 +74,15 @@ def get_qa_pipeline(filename: str, model_choice: str):
             return_full_text=True
         )
 
-        wrapped_pipeline = SimpleTextGenWrapper(llm_pipeline)
+        llm = HuggingFacePipeline(pipeline=llm_pipeline)
 
         EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
         CHROMA_PATH = os.getenv("CHROMA_PATH", "./chroma_db")
         embedding_function = HuggingFaceEmbeddings(model_name=EMBED_MODEL_NAME)
         vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
-        llm = HuggingFacePipeline(pipeline=wrapped_pipeline)
-        _qa_pipeline[key] = RetrievalQA.from_chain_type(llm=llm, retriever=vectordb.as_retriever())
+        chain = LLMChain(llm=llm, prompt=prompt)
+        _qa_pipeline[key] = chain, vectordb
 
         print("✅ QA Pipeline loaded successfully.")
         return _qa_pipeline[key]
@@ -109,27 +115,14 @@ def run_qa(query: str, filename: str, model_choice: str) -> str:
     """
     Create a RAG QA response to a user's question
     """
-    qa = get_qa_pipeline(filename, model_choice)
+    pair = get_qa_pipeline(filename, model_choice)
 
-    if qa is None:
+    if pair is None:
         return "QA pipeline is not ready"
     
-    response = qa.run(query)
+    chain, vectordb = pair
+    relevant_docs = vectordb.similarity_search(query, k=4)
+    context = "\n".join([doc.page_content for doc in relevant_docs])
 
-    # Respond if LangChain returns to list
-    if isinstance(response, list):
-        try:
-            # Extract text from list format returned by huggingface pipeline
-            response_text = response[0].get("generated_text", str(response[0]))
-            
-        except (KeyError, TypeError):
-            return str(response[0])
-    
-    # Huggingface pipeline is just returned to the string
-    elif isinstance(response, str):
-        response_text = response.strip()
-    
-    else:
-        response_text = str(response)
-        
-    return clean_response(response_text)
+    response = chain.run({"context": context, "question": query})
+    return clean_response(response)

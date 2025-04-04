@@ -475,7 +475,6 @@ def check_lora_ready():
 
 @app.route('/ask', methods=['POST'])
 def ask_question():
-    from transformers import AutoTokenizer, GPT2LMHeadModel, AutoConfig
 
     data = request.json
     print(f"ask_question: {data}")
@@ -501,6 +500,8 @@ def ask_question():
     # Performing classification model prediction
     prediction = None
     model = None
+    df_uploaded = None
+    feature_columns = []
 
     if task == "classification" and input_data:
         try:
@@ -513,61 +514,37 @@ def ask_question():
                 df_uploaded, _ = common.load_file(f"upload/{filename}")
                 IGNORE_COLUMNS = ["ID", "Timestamp", "target", "label"]
                 feature_columns = [col for col in df_uploaded.columns if col not in IGNORE_COLUMNS]
-
-                input_values = None
-
-                # ✅ Step 1: Processing User Input Values
-                if input_data:
-                    input_values = input_data
-
-                elif question_contains_numbers(question):
-                    extracted = extract_numbers_from_text(question)
-                    if len(extracted) == len(feature_columns):
-                        input_values = extracted
-                
-                if input_values is None:
-                    try:
-                        input_values = extract_values_from_natural_input(question, expected_len=len(feature_columns))
-                    except ValueError as e:
-                        print("Failed to extract values from question:", e)
-                        input_values = None
-
-                # ✅ Step 2: Convert DataFrame
-                if isinstance(input_values, list):
-                    df_input = pd.DataFrame([input_values], columns=feature_columns)
-                elif isinstance(input_values, dict):
-                    df_input = pd.DataFrame([input_values])
-                else:
-                    raise ValueError("The input format is not a list or dictionary.")
-
-                for col in df_input.columns:
-                    originam_dtype = df_uploaded[ol].dtype
-                    try:
-                        df_input[col] = pd.to_numeric(df_input[col], errors="ignore")
-                    except Exception:
-                        pass
-
-                # ✅ Step 3: Prediction
-                prediction = model_clf.predict(df_input)[0]
-                context += f"\n\nPrediction result: {prediction}"
-
         except Exception as e:
-            print(f"Classification prediction error: {e}")
-            context += f"\n❌ Prediction error: {str(e)}"
-        
-    try:
-        from rag_qa import get_qa_pipeline
-        qa = get_qa_pipeline(filename, model_choice)
-        if qa is None:
-            print("[ERROR] QA pipeline is None. Aborting.")
-            return jsonify({"response": "QA pipeline is None."})
-        return jsonify({
-            "response": context,
-            "prediction": prediction
-        })
+                context += f"Model loading failed: {str(e)}"
     
-    except Exception as e:
-        return jsonify({"response": f"❌ Generation error: {str(e)}"})
+    # Classification + input_data
+    if task == "classification" and input_data:
+        prediction, msg = predict_from_input(input_data, model_clf, df_uploaded, feature_columns)
+        context += f"\n\nPrediction result: {prediction}" if prediction else f"\n{msg}"
+    
+    # classification + natural language question with numbers
+    elif task == "classification" and question_contains_numbers(question):
+        extracted = extract_numbers_from_text(question)
+        
+        if model_clf and len(extracted) == len(feature_columns):
+            prediction, msg = predict_from_input(extracted, model_clf, df_uploaded, feature_columns)
+            context += f"\n\nPrediction result: {prediction}" if prediction else f"\n{msg}"
+        
+        else:
+            context += "\nNot enough values for prediction."
+    
+    # Regular question -> RAG
+    else:
+        try:
+            rag_response = run_qa(question, filename, model_choice)
+            context = f"RAG response: {rag_response}"
+        except Exception as e:
+                context = f"RAG error: {str(e)}"
+    
+    return jsonify({
+        "response": context,
+        "prediction": prediction
+    })
 
 def extract_numbers_from_text(text):
     """Extract only numbers from natural language sentences"""
@@ -587,6 +564,35 @@ def extract_values_from_natural_input(text, expected_len):
 
 def question_contains_numbers(question: str) -> bool:
     return bool(re.search(r'\d+(?:\.\d+)?', question))
+
+def predict_from_input(input_values, model, df_uploaded, feature_columns):
+    if model is None or not feature_columns:
+        return None, "Model or features not loaded."
+    
+    try:
+        if isinstance(input_values, list):
+            df_input = pd.DataFrame([input_values], columns=feature_columns)
+        elif isinstance(input_values, dict):
+            df_input = pd.DataFrame([input_values])
+        else:
+            return None, "Invalid input format."
+        
+        for col in df_input.columns:
+            try:
+                orig_dtype = df_uploaded[col].dtype
+                if pd.api.types.is_numeric_dtype(orig_dtype):
+                    df_input[col] = pd.to_numeric(df_input[col], errors="coerce")
+                else:
+                    df_input[col] = df_input[col].astype(str)
+            
+            except Exception as conv_err:
+                print(f"Conversion failed for {col}: {conv_err}")
+        
+        pred = model.predict(df_input)[0]
+        return pred, "Success"
+    
+    except Exception as e:
+        return None, str(e)
 
 if __name__ == '__main__':
     app.run(debug=True)
