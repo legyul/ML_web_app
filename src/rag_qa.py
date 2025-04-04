@@ -6,6 +6,7 @@ from langchain_huggingface import HuggingFacePipeline
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.schema.output_parser import StrOutputParser
+from langchain_core.runnables import RunnableLambda
 from transformers import pipeline, AutoTokenizer, GPT2LMHeadModel,TextGenerationPipeline, GPT2Config
 from lora_train import get_finedtuned_model_path
 import json
@@ -83,7 +84,16 @@ def get_qa_pipeline(filename: str, model_choice: str):
         embedding_function = HuggingFaceEmbeddings(model_name=EMBED_MODEL_NAME)
         vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
-        chain = prompt | llm | StrOutputParser()
+        def extract_text(output):
+            if isinstance(output, list) and len(output) > 0:
+                return output[0].get("generated_text", str(output[0]))
+            elif isinstance(output, str):
+                return output
+            elif isinstance(output, dict) and "generated_text" in output:
+                return output["generated_text"]
+            return str(output)
+
+        chain = prompt | llm | RunnableLambda(extract_text)
         _qa_pipeline[key] = (chain, vectordb)
 
         print("✅ QA Pipeline loaded successfully.")
