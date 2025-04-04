@@ -5,6 +5,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_huggingface import HuggingFacePipeline
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
+from langchain.schema.output_parser import StrOutputParser
 from transformers import pipeline, AutoTokenizer, GPT2LMHeadModel,TextGenerationPipeline, GPT2Config
 from lora_train import get_finedtuned_model_path
 import json
@@ -71,7 +72,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
             temperature=0.7,
             top_p=0.95,
             clean_up_tokenization_spaces=True,
-            return_full_text=True
+            return_full_text=False
         )
 
         llm = HuggingFacePipeline(pipeline=llm_pipeline,
@@ -82,8 +83,8 @@ def get_qa_pipeline(filename: str, model_choice: str):
         embedding_function = HuggingFaceEmbeddings(model_name=EMBED_MODEL_NAME)
         vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
-        chain = LLMChain(llm=llm, prompt=prompt)
-        _qa_pipeline[key] = chain, vectordb
+        chain = prompt | llm | StrOutputParser()
+        _qa_pipeline[key] = (chain, vectordb)
 
         print("✅ QA Pipeline loaded successfully.")
         return _qa_pipeline[key]
@@ -127,6 +128,7 @@ def run_qa(query: str, filename: str, model_choice: str) -> str:
 
     try:
         response = chain.invoke({"context": context, "question": query})
+        print("[DEBUG] Raw response:", response)
         return clean_response(response)
     except Exception as e:
         print(f"Error during RAG invoke: {e}")
