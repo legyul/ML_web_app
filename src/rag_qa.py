@@ -75,35 +75,28 @@ def get_qa_pipeline(filename: str, model_choice: str):
             return_full_text=False
         )
 
-        llm = HuggingFacePipeline(pipeline=llm_pipeline,
-                                  model_id=model_path)
+        print("[DEBUG] Testing pipeline output...")
+        test_out = llm_pipeline("Hello, world!")
+        print("[DEBUG] llm_pipeline output:", test_out)
+
+        llm = HuggingFacePipeline(pipeline=llm_pipeline, model_id=None)
+
+        chain = RunnableMap({
+            "context": lambda x: x["context"],
+            "question": lambda x: x["question"]
+        }) | prompt | llm | RunnableLambda(lambda x: (
+            x[0]["generated_text"] if isinstance(x, list) and isinstance(x[0], dict) and "generated_text" in x[0]
+            else x[0] if isinstance(x, list)
+            else x.get("generated_text", str(x)) if isinstance(x, dict)
+            else str(x)
+        ))
 
         EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
         CHROMA_PATH = os.getenv("CHROMA_PATH", "./chroma_db")
         embedding_function = HuggingFaceEmbeddings(model_name=EMBED_MODEL_NAME)
         vectordb = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
-        def extract_text(output):
-            try:
-                if isinstance(output, list) and len(output) > 0:
-                    if isinstance(output[0], dict) and "generated_text" in output[0]:
-                        return output[0]["generated_text"]
-                    else:
-                        return str(output[0])
-                elif isinstance(output, dict):
-                    return output.get("generated_text", str(output))
-                elif isinstance(output, str):
-                    return output
-                return str(output)
-            except Exception as e:
-                print(f"[extract_text ERROR] {e}")
-                return f"RAG post-processing error: {e}"
 
-        chain = RunnableMap({
-            "context": lambda x: x["context"],
-            "question": lambda x: x["question"]
-        }) | prompt | llm | RunnableLambda(lambda x: x[0] if isinstance(x, list) else x) | StrOutputParser()
-        
         _qa_pipeline[key] = (chain, vectordb)
 
         print("✅ QA Pipeline loaded successfully.")
