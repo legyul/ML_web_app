@@ -125,5 +125,9 @@ def run_qa(query: str, filename: str, model_choice: str) -> str:
     relevant_docs = vectordb.similarity_search(query, k=4)
     context = "\n".join([doc.page_content for doc in relevant_docs])
 
-    response = chain.run({"context": context, "question": query})
-    return clean_response(response)
+    try:
+        response = chain.invoke({"context": context, "question": query})
+        return clean_response(response)
+    except Exception as e:
+        print(f"Error during RAG invoke: {e}")
+        return f"RAG error: {str(e)}"
