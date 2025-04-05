@@ -491,6 +491,7 @@ def ask_question():
     # Dynamically load QA pipeline when needed
     try:
         # Reset RAG QA Pipeline
+        print("[DEBUG] Calling run_qa() now...")
         rag_response = run_qa(question, filename, model_choice)
         context = f"RAG response: {rag_response}"
     except Exception as e:

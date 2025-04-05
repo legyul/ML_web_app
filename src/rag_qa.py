@@ -133,6 +133,8 @@ def run_qa(query: str, filename: str, model_choice: str) -> str:
     """
     Create a RAG QA response to a user's question
     """
+    print(f"[DEBUG] run_qa() called with filename={filename}, model_choice={model_choice}")
+    print("[DEBUG] Running get_qa_pipeline()")
     pair = get_qa_pipeline(filename, model_choice)
 
     if pair is None:
