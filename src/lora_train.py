@@ -188,6 +188,9 @@ def train_lora_from_user_data(s3_dataset_key: str, filename: str, selected_model
         # ✅ Step 6: Add model_type to config.json
         config_path = os.path.join(SAVE_PATH, "config.json")
         config_dict = model.config.to_dict()
+        if "architectures" in config_dict:
+            del config_dict["architectures"]
+            
         config_dict.update({
             "model_type": "gpt2",
             "architectures": ["GPT2LMHeadModel"],

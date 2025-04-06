@@ -80,16 +80,20 @@ def get_qa_pipeline(filename: str, model_choice: str):
         print("[DEBUG] llm_pipeline output:", test_out)
 
         llm = HuggingFacePipeline(pipeline=llm_pipeline, model_id=None)
+        
+        def parse_output(x):
+            if isinstance(x, list):
+                if len(x) > 0 and isinstance(x[0], dict) and "generated_text" in x[0]:
+                    return x[0]["generated_text"]
+                return str(x[0])
+            elif isinstance(x, dict):
+                return x.get("generated_text", str(x))
+            return str(x)
 
         chain = RunnableMap({
             "context": lambda x: x["context"],
             "question": lambda x: x["question"]
-        }) | prompt | llm | RunnableLambda(lambda x: (
-            x[0]["generated_text"] if isinstance(x, list) and isinstance(x[0], dict) and "generated_text" in x[0]
-            else x[0] if isinstance(x, list)
-            else x.get("generated_text", str(x)) if isinstance(x, dict)
-            else str(x)
-        ))
+        }) | prompt | llm | RunnableLambda(parse_output)
 
         EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
         CHROMA_PATH = os.getenv("CHROMA_PATH", "./chroma_db")
