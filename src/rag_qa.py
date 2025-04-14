@@ -33,6 +33,24 @@ prompt = PromptTemplate(
     template=CUSTOM_TEMPLATE
 )
 
+def extract_text(response):
+    try:
+        if isinstance(response, list) and len(response) > 0:
+            if isinstance(response[0], dict):
+                return response[0].get("generated_text") or response[0].get("translation_text") or str(response[0])
+            
+            return str(response[0])
+        
+        elif isinstance(response, dict):
+            return response.get("generated_text") or response.get("translation_text") or str(response)
+        
+        elif isinstance(response, str):
+            return response
+        
+        return str(response)
+    
+    except Exception as e:
+        return f"Extraction error: {str(e)}"
 
 def get_qa_pipeline(filename: str, model_choice: str):
     global _qa_pipeline
@@ -80,7 +98,7 @@ def get_qa_pipeline(filename: str, model_choice: str):
         print("[DEBUG] llm_pipeline output:", test_out)
 
         llm = HuggingFacePipeline(pipeline=llm_pipeline, model_id=None)
-        
+
         def parse_output(x):
             if isinstance(x, list):
                 if len(x) > 0 and isinstance(x[0], dict) and "generated_text" in x[0]:
@@ -150,8 +168,13 @@ def run_qa(query: str, filename: str, model_choice: str) -> str:
 
     try:
         response = chain.invoke({"context": context, "question": query})
-        print("[DEBUG] Raw response:", response)
-        return clean_response(response)
+        print("[DEBUG] Raw response type: ", type(response))
+        print("[DEBUG] Raw response content: ", response)
+
+        response_text = extract_text(response)
+        print("[DEBUG] Extracted text: ", response_text)
+        
+        return clean_response(response_text)
     except Exception as e:
         print(f"Error during RAG invoke: {e}")
         return f"RAG error: {str(e)}"
