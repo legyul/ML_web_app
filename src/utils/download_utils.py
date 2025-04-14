@@ -133,6 +133,7 @@ def download_model_from_huggingface():
         local_dir=HF_LOCAL_DIR,
         local_dir_use_symlinks=False,
         resume_download=True,
+        force_download=True
         max_workers=1,
         ignore_patterns=["*.tflite", "*.ot", "*.mlmodel"],
     )
